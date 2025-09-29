@@ -42,7 +42,7 @@ export async function POST(req) {
       )
     }
 
-    // 2️⃣ Check if email exists in Auth
+    // 2️⃣ Check if email already exists in Auth
     const { data: userList, error: listError } = await supabaseAdmin.auth.admin.listUsers({ limit: 1000 })
     if (listError) throw listError
 
@@ -50,12 +50,12 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Email already exists in Auth' }, { status: 400 })
     }
 
-    // 3️⃣ Create Auth user with proper email confirmation
+    // 3️⃣ Create Auth user (role fixed: "user")
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,          // ✅ correct key
-      user_metadata: { role: 'user '}
+      email_confirm: true,
+      user_metadata: { role: 'user', full_name }
     })
     if (authError) throw authError
 
@@ -74,7 +74,7 @@ export async function POST(req) {
       academic_year: year || null,
       contact_number: contact_number || null,
       role: 'user',
-      total_bill: '0',
+      total_bill: 0,
       last_poll_at: null,
       onboarding_complete: false,
       created_at: new Date().toISOString()
@@ -82,18 +82,18 @@ export async function POST(req) {
 
     const { error: profileError } = await supabaseAdmin.from('profiles_new').insert([profileData])
     if (profileError) {
-      // 6️⃣ Rollback Auth user if profile fails
+      // Rollback Auth user if profile insert fails
       await supabaseAdmin.auth.admin.deleteUser(authUserId)
       return NextResponse.json({ error: 'Database error creating new user' }, { status: 500 })
     }
 
-    // 7️⃣ Return success
+    // 6️⃣ Return success
     return NextResponse.json({
       success: true,
       user_id,
       email,
       full_name,
-      role:'user'
+      role: 'user'
     })
   } catch (err) {
     console.error('❌ API Error:', err)

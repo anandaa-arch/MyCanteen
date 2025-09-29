@@ -36,49 +36,44 @@ export default function UserDashboard() {
     checkAuthAndLoadData()
   }, [])
 
-  const checkAuthAndLoadData = async () => {
-    try {
-      setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
+const checkAuthAndLoadData = async () => {
+  try {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push('/login')
-        return
-      }
-
-      // Fetch profile from profiles_new table
-      const { data: profile, error } = await supabase
-        .from('profiles_new')
-        .select('*')
-        .eq('email', user.email)
-        .single()
-
-      if (error || !profile) {
-        router.push('/unauthorized')
-        return
-      }
-
-      if (profile.role !== 'user') {
-        router.push('/unauthorized')
-        return
-      }
-
-      setCurrentUser({
-        id: user.id, // Use auth user ID for poll_responses
-        profile_id: profile.id, // Keep profile ID for other queries
-        email: user.email,
-        name: profile.full_name || user.email.split('@')[0],
-        role: profile.role
-      })
-
-      await loadUserStats(user.id, profile.id)
-    } catch (err) {
-      console.error('Error fetching user:', err)
-      router.push('/login')
-    } finally {
-      setLoading(false)
+    if (!user) {
+      router.push('/login'); // Not logged in
+      return;
     }
+
+    const { data: profile, error } = await supabase
+      .from('profiles_new')
+      .select('*')
+      .eq('email', user.email)
+      .single();
+
+    if (error || profile?.role !== 'user') {
+      router.push('/login'); // Not a user
+      return;
+    }
+
+    setCurrentUser({
+      id: user.id,
+      profile_id: profile.id,
+      email: user.email,
+      name: profile.full_name || user.email.split('@')[0],
+      role: profile.role
+    });
+
+    await loadUserStats(user.id, profile.id);
+  } catch (err) {
+    console.error('Error fetching user:', err);
+    router.push('/login'); // Any error → login
+  } finally {
+    setLoading(false);
   }
+};
+
 
   const loadUserStats = async (userId, profileId) => {
     try {

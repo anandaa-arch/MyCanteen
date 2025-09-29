@@ -1,4 +1,6 @@
-// app/admin/dashboard/page.js - Updated with inventory navigation
+
+// app/admin/dashboard/page.js - Alternative approach using profiles_new table
+
 'use client'
 
 import { useState, useEffect } from 'react';
@@ -38,41 +40,59 @@ export default function AdminDashboard() {
     }
   }
 
-  // Auth + Initial load
+  // Simplified fetch users function
+  const fetchUsers = async (searchQuery = '') => {
+    try {
+      let query = supabase
+        .from('profiles_new')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (searchQuery.trim()) {
+        query = query.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Fetch error:', error.message);
+        setUsers([]);
+      } else {
+        console.log('Fetched users:', data?.length || 0);
+        setUsers(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setUsers([]);
+    }
+  };
+
   useEffect(() => {
     const fetchInitial = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+
         if (!user) {
           router.push('/login');
           return;
         }
 
-        // Check if user is admin
-        const { data: profile } = await supabase
+        // Check if user is admin from profiles_new table
+        const { data: profile, error } = await supabase
           .from('profiles_new')
           .select('role')
           .eq('id', user.id)
           .single();
 
-        if (profile?.role !== 'admin') {
-          router.push('/unauthorized');
+        if (error || !profile || profile.role !== 'admin') {
+          console.error('Not admin or profile not found:', error);
+          router.push('/login');
           return;
         }
 
         setCurrentUser(user);
-
-        // Fetch all users
-        const { data: usersData, error } = await supabase
-          .from('profiles_new')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching users:', error.message);
-        } else {
-          setUsers(usersData || []);
-        }
+        await fetchUsers();
+        await fetchRevenueData();
       } catch (error) {
         console.error('Error in initial fetch:', error);
         router.push('/login');
@@ -82,56 +102,32 @@ export default function AdminDashboard() {
     };
 
     fetchInitial();
-    fetchRevenueData();
   }, [router, supabase]);
 
   // Search functionality
   useEffect(() => {
-    const fetchUsers = async () => {
-      if (!searchTerm.trim()) {
-        // If no search term, fetch all users
-        try {
-          const { data, error } = await supabase
-            .from('profiles_new')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (error) {
-            console.error('Fetch error:', error.message);
-          } else {
-            setUsers(data || []);
-          }
-        } catch (error) {
-          console.error('Error fetching all users:', error);
-        }
-        return;
-      }
-
-      setLoading(true);
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles_new')
-          .select('*')
-          .or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Search error:', error.message);
-        } else {
-          setUsers(data || []);
-        }
-      } catch (error) {
-        console.error('Error in search:', error);
-      } finally {
+    const performSearch = async () => {
+      if (!loading) {
+        setLoading(true);
+        await fetchUsers(searchTerm);
         setLoading(false);
       }
     };
 
-    // Debounce search
-    const timeoutId = setTimeout(fetchUsers, 300);
+    const timeoutId = setTimeout(performSearch, 300);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, supabase]);
+  }, [searchTerm]);
+
+  // Handle user update callback
+  const handleUserUpdate = (updatedUser) => {
+    setUsers(prevUsers => 
+      prevUsers.map(user => 
+        user.id === updatedUser.id ? updatedUser : user
+      )
+    );
+    
+    setSelectedUser(updatedUser);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -182,6 +178,7 @@ export default function AdminDashboard() {
       <UserDetailModal
         user={selectedUser}
         onClose={() => setSelectedUser(null)}
+        onUserUpdate={handleUserUpdate}
       />
     </div>
   );

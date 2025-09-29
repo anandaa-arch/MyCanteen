@@ -34,8 +34,7 @@ export default function PollHeader({ onLogout, currentUser }) {
             </div>
             <button
               onClick={onLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-            >
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
               Logout
             </button>
           </div>
