@@ -1,7 +1,7 @@
 // app/admin/dashboard/components/DashboardHeader.js
 'use client';
 
-import { Plus, BarChart3, Package, Menu, X, User, LogOut } from 'lucide-react';
+import { Plus, BarChart3, Package, Menu, X, User, LogOut, UtensilsCrossed, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -63,6 +63,24 @@ export default function DashboardHeader({ onCreateUser, onManagePolls, onManageI
               <Package size={16} className="text-purple-600" />
               <span className="hidden xl:inline">Billing</span>
               <span className="xl:hidden">Bills</span>
+            </button>
+
+            <button
+              onClick={() => router.push('/admin/menu')}
+              className="inline-flex items-center gap-2 text-gray-700 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-all duration-150 font-medium text-sm border border-transparent hover:border-red-200"
+            >
+              <UtensilsCrossed size={16} className="text-red-600" />
+              <span className="hidden xl:inline">Menu</span>
+              <span className="xl:hidden">Menu</span>
+            </button>
+
+            <button
+              onClick={() => router.push('/admin/qr-scanner')}
+              className="inline-flex items-center gap-2 text-gray-700 hover:text-cyan-700 hover:bg-cyan-50 px-3 py-2 rounded-lg transition-all duration-150 font-medium text-sm border border-transparent hover:border-cyan-200"
+            >
+              <Smartphone size={16} className="text-cyan-600" />
+              <span className="hidden xl:inline">QR Scanner</span>
+              <span className="xl:hidden">Scanner</span>
             </button>
             
             {onManageInventory && (
@@ -161,6 +179,28 @@ export default function DashboardHeader({ onCreateUser, onManagePolls, onManageI
             >
               <Package size={18} className="text-purple-600 flex-shrink-0" />
               Billing
+            </button>
+
+            <button
+              onClick={() => {
+                router.push('/admin/menu');
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 text-gray-700 hover:text-red-700 hover:bg-red-50 px-4 py-3 rounded-lg transition-all duration-150 text-left font-medium border border-transparent hover:border-red-200"
+            >
+              <UtensilsCrossed size={18} className="text-red-600 flex-shrink-0" />
+              Menu Management
+            </button>
+
+            <button
+              onClick={() => {
+                router.push('/admin/qr-scanner');
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-3 text-gray-700 hover:text-cyan-700 hover:bg-cyan-50 px-4 py-3 rounded-lg transition-all duration-150 text-left font-medium border border-transparent hover:border-cyan-200"
+            >
+              <Smartphone size={18} className="text-cyan-600 flex-shrink-0" />
+              QR Scanner
             </button>
 
             {onManageInventory && (

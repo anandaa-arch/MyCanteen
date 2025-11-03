@@ -26,11 +26,31 @@ export async function downloadInvoice({ userId, userName, startDate, endDate, mo
     });
 
     if (!response.ok) {
-      
+      let errorMessage = 'Invoice generation failed';
+      try {
+        const errorData = await response.json();
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      } catch (e) {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
 
     // Get the blob from response
     const blob = await response.blob();
+    
+    if (blob.size === 0) {
+      throw new Error('Received empty invoice');
+    }
+    
+    // Verify it's actually a PDF
+    if (!blob.type.includes('pdf')) {
+      console.warn('Warning: Blob type is', blob.type, 'instead of PDF');
+    }
     
     // Create download link
     const url = window.URL.createObjectURL(blob);
@@ -46,9 +66,11 @@ export async function downloadInvoice({ userId, userName, startDate, endDate, mo
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
     
+    return { success: true };
+    
   } catch (error) {
     console.error('Error downloading invoice:', error);
-    
+    throw error;
   }
 }
 

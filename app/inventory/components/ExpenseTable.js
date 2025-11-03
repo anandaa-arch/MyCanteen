@@ -38,7 +38,6 @@ export default function ExpenseTable() {
       const res = await fetch('/api/expenses');
       if (!res.ok) throw new Error('Failed to fetch expenses');
       const data = await res.json();
-      console.log("Fetched expenses:", data);
       setExpenses(data);
       setFilteredExpenses(data);
     } catch (err) {
@@ -130,6 +129,10 @@ export default function ExpenseTable() {
       const res = await fetch(`/api/expenses/${expenseId}`, { method: 'DELETE' });
       if (res.ok) {
         fetchExpenses(); // Refresh the list
+        alert('✅ Expense deleted successfully!');
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Failed to delete expense');
       }
     } catch (err) {
       console.error('Error deleting expense:', err);
@@ -144,7 +147,7 @@ export default function ExpenseTable() {
           <Loader className="h-8 w-8 text-blue-500 animate-spin mr-3" />
           <div>
             <p className="text-gray-600 text-lg font-medium">Loading expenses...</p>
-            <p className="text-gray-400 text-sm">Fetching data from database</p>
+            <p className="text-gray-600 text-sm font-medium">Fetching data from database</p>
           </div>
         </div>
       </div>

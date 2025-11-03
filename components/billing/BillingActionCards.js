@@ -37,7 +37,7 @@ export const AdminBillingCards = ({ currentMonth, currentYear, billingStats }) =
           <Calculator className="w-8 h-8 text-blue-200" />
         </div>
         <div className="mt-4">
-          <span className="text-xs bg-blue-400 bg-opacity-50 px-2 py-1 rounded-full">
+          <span className="text-xs bg-blue-300 text-blue-900 px-2 py-1 rounded-full font-medium">
             Click to manage billing
           </span>
         </div>
@@ -62,7 +62,7 @@ export const AdminBillingCards = ({ currentMonth, currentYear, billingStats }) =
           <Receipt className="w-8 h-8 text-green-200" />
         </div>
         <div className="mt-4">
-          <span className="text-xs bg-green-400 bg-opacity-50 px-2 py-1 rounded-full">
+          <span className="text-xs bg-green-300 text-green-900 px-2 py-1 rounded-full font-medium">
             Billing dashboard
           </span>
         </div>
@@ -192,10 +192,10 @@ export const BillingSummaryCard = ({
         )}
         
         {pendingDues > 0 && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="mt-4 p-3 bg-red-100 border border-red-400 rounded-lg">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-600" />
-              <span className="text-sm text-red-800">
+              <AlertCircle className="w-4 h-4 text-red-700" />
+              <span className="text-sm font-medium text-red-800">
                 {isAdmin ? 'Some users have pending dues' : 'You have outstanding dues'}
               </span>
             </div>

@@ -3,16 +3,18 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabaseClient } from '@/lib/supabaseClient';
 
 import PollHeader from './components/PollHeader';
-
 import PollFilters from './components/PollFilters';
 import PollResponseTable from './components/PollResponseTable';
+import { PollsErrorBoundary } from '@/components/PageErrorBoundary';
+import { FullPageLoader } from '@/components/LoadingSpinner';
+import { DashboardSkeleton } from '@/components/Skeleton';
 
-export default function AdminPollsPage() {
+function AdminPollsPageContent() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = useSupabaseClient();
 
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,6 +22,8 @@ export default function AdminPollsPage() {
   const [pollResponses, setPollResponses] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all'); // all, pending, confirmed, no-response
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const [showUpdateNotification, setShowUpdateNotification] = useState(false);
 
   useEffect(() => {
     checkAuthAndInitialize();
@@ -30,6 +34,47 @@ export default function AdminPollsPage() {
       fetchPollData();
     }
   }, [selectedDate, currentUser]);
+
+  // Real-time subscription to poll_responses table for instant updates
+  useEffect(() => {
+    if (!currentUser) return;
+
+    console.log('🔔 Setting up real-time subscription for poll responses...');
+
+    // Subscribe to changes in poll_responses table
+    const channel = supabase
+      .channel('poll_responses_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'poll_responses',
+          filter: `date=eq.${selectedDate}`
+        },
+        (payload) => {
+          console.log('⚡ Real-time update detected:', payload);
+          
+          // Show brief notification
+          setShowUpdateNotification(true);
+          setTimeout(() => setShowUpdateNotification(false), 3000);
+          
+          // Instantly refresh data when any change occurs
+          fetchPollData();
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Real-time subscription active');
+        }
+      });
+
+    // Cleanup subscription on unmount or date change
+    return () => {
+      console.log('🔌 Unsubscribing from real-time updates');
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, selectedDate]);
 
   const checkAuthAndInitialize = async () => {
     try {
@@ -72,23 +117,47 @@ export default function AdminPollsPage() {
     try {
       setLoading(true);
       
-      const { data: responses, error } = await supabase
+      console.log(`🔄 Fetching poll data for ${selectedDate}...`);
+      
+      // First get poll responses
+      const { data: responses, error: pollError } = await supabase
         .from('poll_responses')
-        .select(`
-          *,
-          profiles_new!poll_responses_user_id_fkey(
-            full_name,
-            email,
-            contact_number
-          )
-        `)
+        .select('*')
         .eq('date', selectedDate);
 
-      if (error) throw error;
+      if (pollError) {
+        console.error('Poll fetch error:', pollError);
+        throw pollError;
+      }
+
+      console.log(`✅ Fetched ${responses?.length || 0} poll responses`);
+      setLastRefresh(new Date());
+
+      // Then get user profiles for those responses
+      if (responses && responses.length > 0) {
+        const userIds = responses.map(r => r.user_id);
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles_new')
+          .select('id, full_name, email, contact_number')
+          .in('id', userIds);
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+        } else {
+          // Merge profiles into responses
+          const responsesWithProfiles = responses.map(response => ({
+            ...response,
+            profiles_new: profiles?.find(p => p.id === response.user_id) || null
+          }));
+          setPollResponses(responsesWithProfiles);
+          return;
+        }
+      }
 
       setPollResponses(responses || []);
     } catch (error) {
       console.error('Error fetching poll data:', error);
+      setPollResponses([]);
     } finally {
       setLoading(false);
     }
@@ -108,7 +177,7 @@ export default function AdminPollsPage() {
     totalUsers: allUsers.length,
     totalResponses: pollResponses.length,
     pendingConfirmations: pollResponses.filter(r => r.confirmation_status === 'pending').length,
-    confirmedResponses: pollResponses.filter(r => r.confirmation_status === 'confirmed').length,
+    confirmedResponses: pollResponses.filter(r => r.confirmation_status === 'confirmed_attended').length,
     attendingUsers: pollResponses.filter(r => r.present).length,
     noResponseUsers: allUsers.length - pollResponses.length,
     fullMeals: pollResponses.filter(r => r.present && r.portion_size === 'full').length,
@@ -139,9 +208,9 @@ export default function AdminPollsPage() {
 
     switch (filterStatus) {
       case 'pending':
-        return allUsersData.filter(item => item.confirmation_status === 'pending');
+        return allUsersData.filter(item => item.confirmation_status === 'pending_customer_response' || item.confirmation_status === 'awaiting_admin_confirmation');
       case 'confirmed':
-        return allUsersData.filter(item => item.confirmation_status === 'confirmed');
+        return allUsersData.filter(item => item.confirmation_status === 'confirmed_attended');
       case 'no-response':
         return allUsersData.filter(item => !item.hasResponse);
       case 'attending':
@@ -152,18 +221,23 @@ export default function AdminPollsPage() {
   };
 
   if (loading && !currentUser) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Real-time Update Notification */}
+      {showUpdateNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in-right">
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          <span className="font-medium">Poll data updated!</span>
+        </div>
+      )}
+
       <PollHeader 
         onLogout={handleLogout}
         currentUser={currentUser}
+        onRefresh={fetchPollData}
       />
       
      
@@ -173,6 +247,7 @@ export default function AdminPollsPage() {
         onDateChange={setSelectedDate}
         filterStatus={filterStatus}
         onFilterChange={setFilterStatus}
+        lastRefresh={lastRefresh}
       />
       
       <PollResponseTable 
@@ -182,5 +257,13 @@ export default function AdminPollsPage() {
         selectedDate={selectedDate}
       />
     </div>
+  );
+}
+
+export default function AdminPollsPage() {
+  return (
+    <PollsErrorBoundary>
+      <AdminPollsPageContent />
+    </PollsErrorBoundary>
   );
 }

@@ -37,7 +37,11 @@ export default function ExpenseForm({ onAdded }) {
           vendor: '',
           incurred_on: new Date().toISOString().slice(0, 10)
         });
-        onAdded?.(data);
+        // Call the callback to refresh parent component
+        if (onAdded) {
+          onAdded(data);
+        }
+        alert('✅ Expense added successfully!');
       } else {
         alert(data.error || 'Failed to add expense');
       }

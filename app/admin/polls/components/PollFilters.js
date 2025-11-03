@@ -1,11 +1,12 @@
 // components/polls/PollFilters.js
-import { Calendar, Filter } from 'lucide-react';
+import { Calendar, Filter, Clock } from 'lucide-react';
 
 export default function PollFilters({ 
   selectedDate, 
   onDateChange, 
   filterStatus, 
-  onFilterChange 
+  onFilterChange,
+  lastRefresh 
 }) {
   const filterOptions = [
     { value: 'all', label: 'All Users', count: 'all' },
@@ -88,6 +89,21 @@ export default function PollFilters({
             </div>
           </div>
         </div>
+
+        {/* Last Refresh Time */}
+        {lastRefresh && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Clock size={14} />
+              <span>Last refreshed: {lastRefresh.toLocaleTimeString()}</span>
+              <span className="text-gray-400">•</span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-green-600 font-medium">Real-time updates active</span>
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Active Filter Display */}
         {filterStatus !== 'all' && (

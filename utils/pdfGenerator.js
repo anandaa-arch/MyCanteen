@@ -1,98 +1,122 @@
-// utils/pdfGenerator.js - Minimal test version
+// utils/pdfGenerator.js
 
-import fs from 'fs';
-import path from 'path';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 /**
- * Minimal test - just return the original template without modification
+ * Generate PDF invoice with user data
+ * @param {Object} data - Invoice data
+ * @returns {Promise<Buffer>} - PDF buffer
  */
 export async function generateInvoicePDF(data) {
   try {
-    console.log('🧪 MINIMAL TEST: Starting PDF generation...');
-    
-    const templatePath = path.join(process.cwd(), 'public', 'MyCanteen_temp_invoice.pdf');
-    console.log('📁 Reading template from:', templatePath);
-    
-    // Test 1: Just return the original template
-    console.log('🔍 Test 1: Returning original template...');
-    const originalTemplate = fs.readFileSync(templatePath);
-    console.log('✅ Original template size:', originalTemplate.length, 'bytes');
-    
-    // If this works, we know the issue is in PDF modification
-    return originalTemplate;
-    
-  } catch (error) {
-    console.error('❌ Error in minimal test:', error);
-    
-    // Fallback: Create completely new PDF
-    return await createBrandNewPDF(data);
-  }
-}
-
-/**
- * Create a completely new PDF from scratch
- */
-async function createBrandNewPDF(data) {
-  try {
-    console.log('🆕 Creating brand new PDF...');
-    
-    const { PDFDocument, rgb, StandardFonts } = await import('pdf-lib');
-    
-    // Create new document
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595, 842]); // A4 size
     
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    // Simple layout
+    // Header
     page.drawText('MyCanteen Invoice', {
-      x: 50, y: 750, size: 20, font: boldFont, color: rgb(0.1, 0.3, 0.8)
+      x: 50, y: 750, size: 24, font: boldFont, color: rgb(0.1, 0.3, 0.8)
     });
     
+    // Invoice details
     page.drawText(`Invoice #: ${data.invoiceNumber}`, {
-      x: 50, y: 700, size: 12, font: font
+      x: 50, y: 700, size: 11, font: font
     });
     
     page.drawText(`Date: ${data.date}`, {
-      x: 50, y: 680, size: 12, font: font
+      x: 50, y: 680, size: 11, font: font
     });
     
-    page.drawText(`Customer: ${data.user.name}`, {
-      x: 50, y: 650, size: 12, font: font
+    // Customer info section
+    page.drawText('Customer Information', {
+      x: 50, y: 640, size: 12, font: boldFont, color: rgb(0.1, 0.3, 0.8)
+    });
+    
+    page.drawText(`Name: ${data.user.name}`, {
+      x: 50, y: 620, size: 11, font: font
     });
     
     page.drawText(`Student ID: ${data.user.id}`, {
-      x: 50, y: 630, size: 12, font: font
+      x: 50, y: 600, size: 11, font: font
     });
     
-    // Simple meals list
-    let yPos = 580;
-    page.drawText('Meals:', { x: 50, y: yPos, size: 12, font: boldFont });
+    page.drawText(`Department: ${data.user.department || 'N/A'}`, {
+      x: 50, y: 580, size: 11, font: font
+    });
     
-    data.meals.forEach(meal => {
-      yPos -= 20;
-      page.drawText(`${meal.description} x ${meal.quantity} = ₹${meal.total}`, {
-        x: 50, y: yPos, size: 10, font: font
+    // Date range
+    page.drawText(`Period: ${data.dateRange?.start || 'N/A'} to ${data.dateRange?.end || 'N/A'}`, {
+      x: 50, y: 560, size: 11, font: font
+    });
+    
+    // Meals header
+    page.drawText('Meals Purchased', {
+      x: 50, y: 520, size: 12, font: boldFont, color: rgb(0.1, 0.3, 0.8)
+    });
+    
+    // Table headers
+    let yPos = 500;
+    const colX = [50, 150, 250, 350, 450];
+    page.drawText('Description', { x: colX[0], y: yPos, size: 10, font: boldFont });
+    page.drawText('Qty', { x: colX[1], y: yPos, size: 10, font: boldFont });
+    page.drawText('Unit Price', { x: colX[2], y: yPos, size: 10, font: boldFont });
+    page.drawText('Total', { x: colX[3], y: yPos, size: 10, font: boldFont });
+    
+    // Draw separator line
+    page.drawLine({
+      start: { x: 50, y: yPos - 5 },
+      end: { x: 500, y: yPos - 5 }
+    });
+    
+    // Meals list
+    yPos -= 25;
+    if (data.meals && Array.isArray(data.meals)) {
+      data.meals.forEach(meal => {
+        page.drawText(meal.description || '', { 
+          x: colX[0], y: yPos, size: 10, font: font 
+        });
+        page.drawText(`${meal.quantity || 0}`, { 
+          x: colX[1], y: yPos, size: 10, font: font 
+        });
+        page.drawText(`Rs. ${meal.unitPrice || 0}`, { 
+          x: colX[2], y: yPos, size: 10, font: font 
+        });
+        page.drawText(`Rs. ${meal.total || 0}`, { 
+          x: colX[3], y: yPos, size: 10, font: font 
+        });
+        yPos -= 20;
       });
+    }
+    
+    // Total separator
+    yPos -= 10;
+    page.drawLine({
+      start: { x: 50, y: yPos },
+      end: { x: 500, y: yPos }
     });
     
-    yPos -= 40;
-    page.drawText(`Total: ₹${data.totalAmount}`, {
-      x: 50, y: yPos, size: 14, font: boldFont, color: rgb(0.8, 0.1, 0.1)
+    // Total amount
+    yPos -= 20;
+    page.drawText('Total Amount:', {
+      x: 350, y: yPos, size: 12, font: boldFont
     });
     
-    page.drawText('Thank you!', {
-      x: 50, y: yPos - 40, size: 12, font: font
+    page.drawText(`Rs. ${data.totalAmount || 0}`, {
+      x: 450, y: yPos, size: 12, font: boldFont, color: rgb(0.8, 0.1, 0.1)
+    });
+    
+    // Footer
+    page.drawText('Thank you for using MyCanteen!', {
+      x: 50, y: 50, size: 10, font: font, color: rgb(0.5, 0.5, 0.5)
     });
     
     const pdfBytes = await pdfDoc.save();
-    console.log('✅ New PDF created, size:', pdfBytes.length, 'bytes');
-    
     return Buffer.from(pdfBytes);
     
   } catch (error) {
-    console.error('❌ Error creating new PDF:', error);
-    throw error;
+    console.error('Error generating PDF:', error);
+    throw new Error(`PDF generation failed: ${error.message}`);
   }
 }

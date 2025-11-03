@@ -117,16 +117,16 @@ const BillingHistory = ({ bills, getStatusBadge, months }) => {
                     <h4 className="font-semibold text-gray-900 mb-3">Meal Breakdown</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span>Half Meals ({bill.half_meal_count || 0} × ₹45)</span>
-                        <span className="font-medium">₹{(bill.half_meal_cost || 0).toFixed(2)}</span>
+                        <span className="text-gray-700 font-medium">Half Meals ({bill.half_meal_count || 0} × ₹45)</span>
+                        <span className="font-semibold text-gray-900">₹{(bill.half_meal_cost || 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Full Meals ({bill.full_meal_count || 0} × ₹60)</span>
-                        <span className="font-medium">₹{(bill.full_meal_cost || 0).toFixed(2)}</span>
+                        <span className="text-gray-700 font-medium">Full Meals ({bill.full_meal_count || 0} × ₹60)</span>
+                        <span className="font-semibold text-gray-900">₹{(bill.full_meal_cost || 0).toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between font-semibold border-t border-gray-200 pt-2">
-                        <span>Total Amount</span>
-                        <span>₹{(bill.total_amount || 0).toFixed(2)}</span>
+                      <div className="flex justify-between font-semibold border-t border-gray-300 pt-2 mt-2">
+                        <span className="text-gray-900">Total Amount</span>
+                        <span className="text-gray-900">₹{(bill.total_amount || 0).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>

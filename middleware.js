@@ -5,6 +5,8 @@ export async function middleware(req) {
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 
+  const pathname = req.nextUrl.pathname
+
   // Get session
   const { data: { session } } = await supabase.auth.getSession()
 
@@ -13,26 +15,40 @@ export async function middleware(req) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
-  // Get user role
-  const role = session.user?.user_metadata?.role
-  const pathname = req.nextUrl.pathname
+  // ALWAYS fetch role from profiles_new table (single source of truth)
+  const { data: profile, error } = await supabase
+    .from('profiles_new')
+    .select('role')
+    .eq('id', session.user.id)
+    .single()
 
-  
+  // If no role found, redirect to login (user may not have a profile)
+  if (error || !profile?.role) {
+    console.error('No role found for user', session.user.id, error)
+    return NextResponse.redirect(new URL('/login', req.url))
+  }
+
+  const role = profile.role
+
   // Admin route protection
-  if (pathname.startsWith('/app/admin') && role !== 'admin') {
+  if (pathname.startsWith('/admin') && role !== 'admin') {
     return NextResponse.redirect(new URL('/unauthorized', req.url))
   }
-// User route protection
-  if (pathname.startsWith('/app/user') && role !== 'user') {
+
+  // User route protection  
+  if (pathname.startsWith('/user') && role !== 'user') {
     return NextResponse.redirect(new URL('/unauthorized', req.url))
   }
+
   return res
 }
 
 export const config = {
   matcher: [
-    '/app/admin/:path*',
-    '/user/dashboard/:path*',
-    // Add other protected paths here
+    '/admin/:path*',
+    '/user/:path*',
+    '/poll',
+    '/profile',
+    '/attendance',
   ],
 }

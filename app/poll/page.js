@@ -1,17 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabaseClient } from '@/lib/supabaseClient';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { pollResponseSchema } from '@/lib/validationSchemas';
+import { FormRadioGroup, FormSubmitButton, FormErrorSummary } from '@/components/FormComponents';
+import { PollsErrorBoundary } from '@/components/PageErrorBoundary';
+import { PollSkeleton } from '@/components/Skeleton';
 
-export default function PollPage() {
-  const [attendance, setAttendance] = useState("");
-  const [portion, setPortion] = useState("");
+function PollPageContent() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [existingResponse, setExistingResponse] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const supabase = createClientComponentClient();
+  const supabase = useSupabaseClient();
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(pollResponseSchema),
+    defaultValues: {
+      attendance: '',
+      portion: '',
+    },
+  });
 
   useEffect(() => {
     // Get current user and check for existing response
@@ -21,6 +39,7 @@ export default function PollPage() {
         setUser(user);
         await checkExistingResponse(user.id);
       }
+      setInitialLoading(false);
     };
 
     getCurrentUser();
@@ -38,21 +57,15 @@ export default function PollPage() {
 
     if (data && !error) {
       setExistingResponse(data);
-      setAttendance(data.present ? 'yes' : 'no');
-      setPortion(data.portion_size);
+      setValue('attendance', data.present ? 'yes' : 'no');
+      setValue('portion', data.portion_size);
       setMessage("You have already submitted your response for today. You can update it below.");
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (formData) => {
     setLoading(true);
-
-    if (!attendance || !portion) {
-      setMessage("⚠️ Please select both attendance and portion.");
-      setLoading(false);
-      return;
-    }
+    setMessage("");
 
     if (!user) {
       setMessage("⚠️ You must be logged in to submit a poll response.");
@@ -64,9 +77,9 @@ export default function PollPage() {
     const pollData = {
       user_id: user.id,
       date: today,
-      present: attendance === 'yes',
-      portion_size: portion,
-      confirmation_status: 'pending'
+      present: formData.attendance === 'yes',
+      portion_size: formData.portion,
+      confirmation_status: 'pending_customer_response'
     };
 
     try {
@@ -81,11 +94,16 @@ export default function PollPage() {
         console.error('Error submitting poll:', error);
         setMessage("❌ Error submitting response. Please try again.");
       } else {
-        setMessage(existingResponse 
-          ? `✅ Response updated!\nAttendance: ${attendance === 'yes' ? 'Present' : 'Absent'}, Portion: ${portion} plate`
-          : `✅ Response submitted!\nAttendance: ${attendance === 'yes' ? 'Present' : 'Absent'}, Portion: ${portion} plate`
-        );
-        setExistingResponse(data);
+        const successMsg = existingResponse 
+          ? `✅ Response updated!\nAttendance: ${formData.attendance === 'yes' ? 'Present' : 'Absent'}, Portion: ${formData.portion} plate`
+          : `✅ Response submitted!\nAttendance: ${formData.attendance === 'yes' ? 'Present' : 'Absent'}, Portion: ${formData.portion} plate`;
+        setMessage(successMsg);
+        setExistingResponse(pollData); // Update local state
+        
+        // Refresh the page data after a short delay
+        setTimeout(() => {
+          checkExistingResponse(user.id);
+        }, 500);
       }
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -94,6 +112,10 @@ export default function PollPage() {
 
     setLoading(false);
   };
+
+  if (initialLoading) {
+    return <PollSkeleton />;
+  }
 
   if (!user) {
     return (
@@ -113,59 +135,32 @@ export default function PollPage() {
         Kindly confirm your attendance and portion size for today&rsquo;s meal.
       </p>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6">
-        {/* Attendance Section */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Will you attend?</h2>
-          <div className="flex flex-col gap-2">
-            {["yes", "no"].map((option) => (
-              <label key={option} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="attendance"
-                  value={option}
-                  checked={attendance === option}
-                  onChange={() => setAttendance(option)}
-                  className="accent-blue-600"
-                  disabled={loading}
-                />
-                <span className="text-gray-700 capitalize">{option}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+      <FormErrorSummary errors={errors} />
 
-        {/* Portion Section */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-2">Portion Size</h2>
-          <div className="flex flex-col gap-2">
-            {["full", "half"].map((option) => (
-              <label key={option} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="portion"
-                  value={option}
-                  checked={portion === option}
-                  onChange={() => setPortion(option)}
-                  className="accent-blue-600"
-                  disabled={loading}
-                />
-                <span className="text-gray-700">
-                  {option === "full" ? "Full Plate" : "Half Plate"}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-md space-y-6 mt-4">
+        <FormRadioGroup
+          label="Will you attend?"
+          options={[
+            { value: 'yes', label: 'Yes' },
+            { value: 'no', label: 'No' }
+          ]}
+          error={errors.attendance?.message}
+          {...register('attendance')}
+        />
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 rounded-lg text-sm transition-colors duration-200"
-        >
+        <FormRadioGroup
+          label="Portion Size"
+          options={[
+            { value: 'full', label: 'Full Plate' },
+            { value: 'half', label: 'Half Plate' }
+          ]}
+          error={errors.portion?.message}
+          {...register('portion')}
+        />
+
+        <FormSubmitButton loading={loading}>
           {loading ? "Submitting..." : existingResponse ? "Update Response" : "Submit Response"}
-        </button>
+        </FormSubmitButton>
 
         {/* Message */}
         {message && (
@@ -179,5 +174,13 @@ export default function PollPage() {
         )}
       </form>
     </div>
+  );
+}
+
+export default function PollPage() {
+  return (
+    <PollsErrorBoundary>
+      <PollPageContent />
+    </PollsErrorBoundary>
   );
 }

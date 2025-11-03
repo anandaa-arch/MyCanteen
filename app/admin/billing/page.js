@@ -3,16 +3,21 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabaseClient } from '@/lib/supabaseClient';
 import BillingHeader from './components/BillingHeader';
 import BillingStatsCards from './components/BillingStatsCards';
 import BillingControls from './components/BillingControls';
 import BillingTable from './components/BillingTable';
 import PaymentModal from './components/PaymentModal';
+import { BillingErrorBoundary } from '@/components/PageErrorBoundary';
+import { FullPageLoader } from '@/components/LoadingSpinner';
+import { BillingSkeleton } from '@/components/Skeleton';
+import { useNotifications, useAdminNotifications } from '@/lib/notificationSystem';
 
-export default function AdminBillingPage() {
+function AdminBillingPageContent() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = useSupabaseClient();
+  const { addNotification } = useNotifications();
 
   // State management
   const [currentUser, setCurrentUser] = useState(null);
@@ -121,8 +126,8 @@ export default function AdminBillingPage() {
 
       if (response.ok) {
         const data = await response.json();
-        alert(`Successfully generated ${data.bills_generated} bills for ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`);
-        fetchBills();
+        alert(`✅ Successfully generated ${data.bills_generated} bills for ${months.find(m => m.value === selectedMonth)?.label} ${selectedYear}`);
+        fetchBills(); // Refresh bills list
       } else {
         const error = await response.json();
         alert(`Error: ${error.error}`);
@@ -156,16 +161,31 @@ export default function AdminBillingPage() {
       });
 
       if (response.ok) {
-        alert('Payment recorded successfully');
+        addNotification({
+          type: 'success',
+          title: 'Payment Recorded',
+          message: `Payment of ₹${paymentAmount} recorded successfully.`,
+          duration: 5000,
+        });
         handleClosePaymentModal();
-        fetchBills();
+        fetchBills(); // Refresh bills list
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        addNotification({
+          type: 'error',
+          title: 'Payment Error',
+          message: error.error || 'Failed to record payment',
+          duration: 5000,
+        });
       }
     } catch (error) {
       console.error('Error recording payment:', error);
-      alert('Failed to record payment');
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'Failed to record payment',
+        duration: 5000,
+      });
     }
   };
 
@@ -184,8 +204,8 @@ export default function AdminBillingPage() {
   };
 
   const filteredBills = bills.filter(bill => {
-    const matchesSearch = bill.profiles_new?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         bill.profiles_new?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = bill.user_profile?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         bill.user_profile?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          bill.user_id?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || bill.status === statusFilter;
@@ -217,11 +237,7 @@ export default function AdminBillingPage() {
   };
 
   if (loading && !currentUser) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <BillingSkeleton />;
   }
 
   return (
@@ -267,5 +283,13 @@ export default function AdminBillingPage() {
         months={months}
       />
     </div>
+  );
+}
+
+export default function AdminBillingPage() {
+  return (
+    <BillingErrorBoundary>
+      <AdminBillingPageContent />
+    </BillingErrorBoundary>
   );
 }

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { 
   QrCode, 
   CreditCard, 
@@ -19,8 +18,20 @@ import {
   Phone,
   Mail
 } from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClientComponentClient()
+// Create a public client for anonymous access (no auth required)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      }
+    })
+  : null
 
 const features = [
   {
@@ -57,29 +68,62 @@ const benefits = [
 export default function LandingPage() {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [todaysStudents, setTodaysStudents] = useState([])
+  const [todaysStats, setTodaysStats] = useState({ fullMeals: 0, halfMeals: 0 })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession()
-      const session = data.session
-      // Session logic remains the same
+      // Session check logic if needed
     }
     checkSession()
   }, [router])
 
-  const handleGetStarted = async () => {
-    const { data } = await supabase.auth.getSession()
-    const session = data.session
-    if (session) {
-      const role = session.user?.user_metadata?.role
-      if (role === 'admin') {
-        router.push('/admin/dashboard')
-      } else {
-        router.push('/user/dashboard')
+  // Fetch today's poll responses
+  useEffect(() => {
+    const fetchTodaysStudents = async () => {
+      try {
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date().toISOString().split('T')[0]
+        console.log('🔍 Fetching poll stats for date:', today)
+        
+        // Fetch from API route (server-side with admin access)
+        const response = await fetch(`/api/public-poll-stats?date=${today}`)
+        const data = await response.json()
+
+        console.log('📊 API Response:', data)
+
+        if (data.error) {
+          console.error('❌ API Error:', data.error)
+          setLoading(false)
+          return
+        }
+
+        // Update state with fetched data
+        setTodaysStudents(data.students.map(student => ({
+          ...student,
+          profiles_new: student.profile // Rename for consistency
+        })))
+        setTodaysStats(data.stats)
+      } catch (err) {
+        console.error('Error:', err)
+      } finally {
+        setLoading(false)
       }
-    } else {
-      router.push('/login')
     }
+
+    fetchTodaysStudents()
+
+    // Refresh every 30 seconds for live updates
+    const interval = setInterval(fetchTodaysStudents, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleGetStarted = async () => {
+    // Always redirect to login page
+    // The login page will redirect to the appropriate dashboard after authentication
+    router.push('/login')
   }
 
   return (
@@ -90,13 +134,15 @@ export default function LandingPage() {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
-              {/* Replace with actual logo once finalized */}
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                  <div className="w-4 h-4 bg-yellow-300 rounded"></div>
-                </div>
+                <Image 
+                  src="/MyCanteen-logo.jpg" 
+                  alt="MyCanteen Logo" 
+                  width={40} 
+                  height={40}
+                  className="rounded-lg object-cover"
+                />
                 <div className="text-2xl font-bold text-orange-500">MyCanteen</div>
-                 {/* <Image src="/public/MyCanteen-logo.jpeg" alt="MyCanteen" width={32} height={32} /> */}
               </div>
             </div>
 
@@ -190,39 +236,75 @@ export default function LandingPage() {
 
             {/* Right Visual */}
             <div className="relative">
-              <div className="relative z-10 bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+              {/* Background Canteen Image */}
+              <div className="absolute inset-0 -top-6 -right-6 rounded-2xl overflow-hidden">
+                <Image
+                  src="/canteen-1.jpg"
+                  alt="Modern Canteen"
+                  fill
+                  className="object-cover opacity-20"
+                  priority
+                />
+              </div>
+              
+              <div className="relative z-10 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-gray-100">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">Today&apos;s Students</h3>
                     <div className="text-sm text-green-600 font-medium">● Live</div>
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <div>
-                        <div className="font-medium text-gray-900">Rahul Sharma</div>
-                        <div className="text-sm text-gray-600">Roll: CS101</div>
-                      </div>
-                      <div className="text-green-600 font-semibold">Full Meal</div>
+                  
+                  {loading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="animate-pulse p-3 bg-gray-100 rounded-lg">
+                          <div className="h-4 bg-gray-300 rounded w-2/3 mb-2"></div>
+                          <div className="h-3 bg-gray-300 rounded w-1/2"></div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="font-medium text-gray-900">Priya Patel</div>
-                        <div className="text-sm text-gray-450">Roll: ME205</div>
-                      </div>
-                      <div className="text-yellow-500 font-semibold">Half Meal</div>
+                  ) : todaysStudents.length > 0 ? (
+                    <div className="space-y-3">
+                      {todaysStudents.map((student, index) => (
+                        <div 
+                          key={student.id} 
+                          className={`flex items-center justify-between p-3 rounded-lg ${
+                            index === 0 ? 'bg-blue-50' : 
+                            index === 1 ? 'bg-gray-50' : 
+                            'bg-green-50'
+                          }`}
+                        >
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {student.profiles_new?.full_name || 'Student'}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {student.profiles_new?.dept && student.profiles_new?.year 
+                                ? `${student.profiles_new.dept} - ${student.profiles_new.year}`
+                                : student.profiles_new?.email || 'N/A'}
+                            </div>
+                          </div>
+                          <div className={`font-semibold ${
+                            student.portion_size === 'full' ? 'text-green-600' : 'text-yellow-500'
+                          }`}>
+                            {student.portion_size === 'full' ? 'Full Meal' : 'Half Meal'}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <div>
-                        <div className="font-medium text-gray-900">Amit Kumar</div>
-                        <div className="text-sm text-gray-600">Roll: EC303</div>
-                      </div>
-                      <div className="text-green-600 font-semibold">Full Meal</div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No responses yet today</p>
+                      <p className="text-sm mt-2">Students will appear here after submitting polls</p>
                     </div>
-                  </div>
+                  )}
+                  
                   <div className="pt-4 border-t border-gray-100">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">Total Portions Today</span>
-                      <span className="font-semibold text-blue-700">156 Full + 78 Half</span>
+                      <span className="font-semibold text-blue-700">
+                        {todaysStats.fullMeals} Full + {todaysStats.halfMeals} Half
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -333,20 +415,32 @@ export default function LandingPage() {
             </div>
 
             {/* Right Visual */}
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-8 text-white">
+            <div className="relative overflow-hidden rounded-2xl">
+              {/* Background Image */}
+              <div className="absolute inset-0">
+                <Image
+                  src="/canteen-2.jpg"
+                  alt="Canteen Dashboard"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600/95 to-blue-800/95"></div>
+              </div>
+              
+              {/* Content */}
+              <div className="relative p-8 text-white">
                 <div className="space-y-6">
                   <h3 className="text-2xl font-bold">Real-Time Dashboard</h3>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-lg">
                       <span>Active Students</span>
                       <span className="font-bold">156</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-lg">
                       <span>Today&apos;s Revenue</span>
                       <span className="font-bold">₹12,450</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-white/10 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-lg">
                       <span>Food Utilization</span>
                       <span className="font-bold">87%</span>
                     </div>
@@ -359,8 +453,20 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-blue-700 to-blue-900 text-white">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
+      <section className="relative py-20 px-4 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <Image
+            src="/canteen-3.jpg"
+            alt="Join MyCanteen"
+            fill
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-700/95 to-blue-900/95"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative max-w-4xl mx-auto text-center space-y-8 text-white">
           <h2 className="text-3xl md:text-4xl font-bold">
             Ready to Transform Your Canteen?
           </h2>
@@ -384,7 +490,16 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Company Info */}
             <div className="space-y-4">
-              <div className="text-2xl font-bold">MyCanteen</div>
+              <div className="flex items-center gap-2">
+                <Image 
+                  src="/MyCanteen-logo.jpg" 
+                  alt="MyCanteen Logo" 
+                  width={40} 
+                  height={40}
+                  className="rounded-lg object-cover"
+                />
+                <div className="text-2xl font-bold">MyCanteen</div>
+              </div>
               <p className="text-gray-400">
                 Empowering institutions with smart canteen management solutions.
               </p>

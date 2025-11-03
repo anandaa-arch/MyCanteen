@@ -1,12 +1,10 @@
 // app/api/admin/update-user/route.js - Fixed for Next.js 15 (role editing removed)
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { getSupabaseRouteClient } from '@/lib/supabaseRouteHandler';
 import { NextResponse } from 'next/server';
 
 export async function PUT(request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const supabase = await getSupabaseRouteClient();
     
     // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -67,38 +65,21 @@ export async function PUT(request) {
       );
     }
 
-    // Check if email is already taken by another user
-    const { data: existingUser, error: checkError } = await supabase
-      .from('profiles_new')
-      .select('id')
-      .eq('email', updateData.email.trim().toLowerCase())
-      .neq('id', userId)
-      .single();
-
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking email uniqueness:', checkError);
-      return NextResponse.json(
-        { error: 'Database error occurred' },
-        { status: 500 }
-      );
-    }
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email is already taken by another user' },
-        { status: 409 }
-      );
-    }
-
-    // Prepare update object (EXPLICITLY EXCLUDING role - admins can no longer change roles)
+    // HYBRID APPROACH: Admins can only update organizational fields
+    // Personal identity fields (full_name, email) are excluded from admin updates
     const updateObject = {
-      full_name: updateData.full_name.trim(),
-      email: updateData.email.trim().toLowerCase(),
+      // Organizational fields - Admin CAN update these
       contact_number: updateData.contact_number?.trim() || null,
-      department: updateData.department?.trim() || null,
-      academic_year: updateData.academic_year || null
-      // Note: role is explicitly NOT included in the update
+      dept: updateData.dept || null,
+      year: updateData.year || null,
+      updated_at: new Date().toISOString()
+      // Personal fields (full_name, email) are NOT included - users must update these themselves
     };
+
+    // Log if admin tried to update personal fields
+    if (updateData.full_name || updateData.email) {
+      console.warn(`Admin ${user.id} attempted to update personal fields (name/email) for user ${userId}. Only organizational fields were updated.`);
+    }
 
     // Log warning if role update was attempted
     if (updateData.role) {
@@ -110,21 +91,32 @@ export async function PUT(request) {
       .from('profiles_new')
       .update(updateObject)
       .eq('id', userId)
-      .select()
-      .single();
+      .select();
 
     if (updateError) {
       console.error('Error updating user:', updateError);
       return NextResponse.json(
-        { error: 'Failed to update user profile' },
+        { error: `Failed to update user profile: ${updateError.message}` },
         { status: 500 }
+      );
+    }
+
+    // Extract the first (and only) updated row
+    const updatedProfile = updatedUser?.[0];
+
+    if (!updatedProfile) {
+      console.error('No rows updated. This usually means RLS policies are blocking the update.');
+      return NextResponse.json(
+        { error: 'Update failed: No rows affected. Please ensure RLS policies allow admin updates.' },
+        { status: 403 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      user: updatedUser,
-      message: 'User profile updated successfully (role updates are not permitted)'
+      user: updatedProfile,
+      message: 'User profile updated successfully (only organizational fields: dept, year, contact)',
+      note: 'Full name and email can only be updated by the user themselves'
     });
 
   } catch (error) {

@@ -2,29 +2,33 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { useSupabaseClient } from '@/lib/supabaseClient'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { loginSchema } from '@/lib/validationSchemas'
+import { FormInput, FormSubmitButton, FormErrorSummary } from '@/components/FormComponents'
+import { Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
+import Image from 'next/image'
+import { AuthErrorBoundary } from '@/components/PageErrorBoundary'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
-  const supabase = createClientComponentClient()
-
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  })
+  const supabase = useSupabaseClient()
 
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prevData) => ({ ...prevData, [name]: value }))
-  }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
+  });
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
+  const onSubmit = async (formData) => {
     setLoading(true)
     setError('')
 
@@ -62,44 +66,99 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* Navigation */}
-      <nav className="absolute top-0 w-full bg-white/95 backdrop-blur-sm border-b border-gray-100 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <button
-              onClick={() => router.push('/')}
-              className="flex items-center gap-2 hover:opacity-80 transition"
-            >
-              <div className="text-2xl font-bold text-blue-700">MyCanteen</div>
-            </button>
+    <div className="min-h-screen bg-white flex">
+      {/* Left Side - Image Section (Hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <Image
+          src="/canteen-3.jpg"
+          alt="Modern Canteen"
+          fill
+          className="object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-700/90 to-blue-900/90"></div>
+        
+        {/* Overlay Content */}
+        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <Image 
+              src="/MyCanteen-logo.jpg" 
+              alt="MyCanteen Logo" 
+              width={48} 
+              height={48}
+              className="rounded-xl object-cover"
+            />
+            <div className="text-3xl font-bold">MyCanteen</div>
+          </div>
 
-            {/* Back to Home */}
-            <button
-              onClick={() => router.push('/')}
-              className="flex items-center gap-2 text-gray-600 hover:text-blue-700 transition font-medium"
-            >
-              <ArrowLeft size={20} />
-              Back to Home
-            </button>
+          {/* Main Content */}
+          <div className="space-y-6">
+            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+              Streamline Your
+              <br />
+              Canteen Operations
+            </h1>
+            <p className="text-xl text-blue-100 max-w-md">
+              Smart attendance tracking, automated billing, and real-time insights for modern institutions.
+            </p>
+            
+            {/* Features */}
+            <div className="space-y-3 pt-6">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <span>QR-based attendance tracking</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <span>Automated billing & reminders</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <span>Real-time analytics dashboard</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="text-sm text-blue-200">
+            © {new Date().getFullYear()} MyCanteen. Professional Mess Management.
           </div>
         </div>
-      </nav>
+      </div>
 
-      {/* Login Content */}
-      <div className="pt-24 pb-12 px-4 flex items-center justify-center min-h-screen">
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         <div className="w-full max-w-md">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-700 rounded-2xl mb-6">
-              <div className="text-2xl font-bold text-white">MC</div>
+          {/* Mobile Logo (Visible on mobile only) */}
+          <div className="lg:hidden mb-8 text-center">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <Image 
+                src="/MyCanteen-logo.jpg" 
+                alt="MyCanteen Logo" 
+                width={48} 
+                height={48}
+                className="rounded-xl object-cover"
+              />
+              <div className="text-2xl font-bold text-blue-700">MyCanteen</div>
             </div>
+          </div>
+
+          {/* Back to Home Button */}
+          <button
+            onClick={() => router.push('/')}
+            className="flex items-center gap-2 text-gray-600 hover:text-blue-700 transition font-medium mb-8"
+          >
+            <ArrowLeft size={20} />
+            Back to Home
+          </button>
+          {/* Header */}
+          <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
               Welcome Back
             </h1>
             <p className="text-lg text-gray-600">
-              Sign in to access your mess dashboard
+              Sign in to access your dashboard
             </p>
           </div>
 
@@ -114,23 +173,16 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Use a form instead of div so Enter works */}
-            <form className="space-y-6" onSubmit={handleLogin}>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter your email address"
-                  className="w-full px-4 py-4 text-gray-900 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-500"
-                />
-              </div>
+            <FormErrorSummary errors={errors} />
+
+            <form className="space-y-6 mt-6" onSubmit={handleSubmit(onSubmit)}>
+              <FormInput
+                label="Email Address"
+                type="email"
+                placeholder="Enter your email address"
+                error={errors.email?.message}
+                {...register('email')}
+              />
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -139,39 +191,31 @@ export default function LoginPage() {
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    autoComplete="current-password"
-                    value={formData.password}
-                    onChange={handleChange}
                     placeholder="Enter your password"
-                    required
-                    minLength={6}
-                    className="w-full px-4 py-4 text-gray-900 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-500 pr-12"
+                    error={errors.password?.message}
+                    className={`w-full px-4 py-4 pr-12 text-gray-900 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 transition placeholder-gray-500 ${
+                      errors.password 
+                        ? 'border-red-500 focus:ring-red-500 bg-red-50' 
+                        : 'border-gray-200 focus:ring-blue-500 focus:border-transparent'
+                    }`}
+                    {...register('password')}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600 transition"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>
+                )}
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-4 px-6 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg hover:shadow-xl"
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Signing in...
-                  </div>
-                ) : (
-                  'Sign In to Dashboard'
-                )}
-              </button>
+              <FormSubmitButton loading={loading}>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </FormSubmitButton>
             </form>
 
             {/* Additional Info */}
@@ -181,6 +225,7 @@ export default function LoginPage() {
                   Having trouble accessing your account?
                 </p>
                 <button
+                  type="button"
                   onClick={() =>
                     setError('Please contact your administrator for support')
                   }
@@ -190,17 +235,6 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center mt-8">
-            <div className="inline-flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Secure Login • Powered by Swifty9</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-2">
-              Professional Mess Management Solution
-            </p>
           </div>
 
           {/* Trust Indicators */}
@@ -213,13 +247,17 @@ export default function LoginPage() {
               <div className="w-3 h-3 bg-green-200 rounded"></div>
               <span>Secure Access</span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <div className="w-3 h-3 bg-orange-200 rounded"></div>
-              <span>24/7 Support</span>
-            </div>
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <AuthErrorBoundary>
+      <LoginPageContent />
+    </AuthErrorBoundary>
   )
 }

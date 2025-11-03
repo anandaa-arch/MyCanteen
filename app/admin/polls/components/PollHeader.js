@@ -1,12 +1,25 @@
 // components/polls/PollHeader.js
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-export default function PollHeader({ onLogout, currentUser }) {
+export default function PollHeader({ onLogout, currentUser, onRefresh }) {
   const router = useRouter();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleBackToDashboard = () => {
     router.push('/admin/dashboard');
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      if (onRefresh) {
+        await onRefresh();
+      }
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500);
+    }
   };
 
   return (
@@ -28,6 +41,15 @@ export default function PollHeader({ onLogout, currentUser }) {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              title="Refresh poll data"
+            >
+              <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
             <div className="text-right">
               <p className="text-sm font-medium text-gray-900">{currentUser?.email}</p>
               <p className="text-xs text-gray-600">Admin</p>

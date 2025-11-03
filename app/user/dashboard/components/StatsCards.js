@@ -2,11 +2,22 @@ const getConfirmationBadge = (status) => {
   if (!status) return null
   
   const badges = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', text: 'Pending Confirmation' },
-    confirmed: { color: 'bg-green-100 text-green-800', text: 'Confirmed' }
+    'pending_customer_response': { color: 'bg-gray-100 text-gray-800', text: '✏️ Pending Response' },
+    'awaiting_admin_confirmation': { color: 'bg-yellow-100 text-yellow-800', text: '⏳ Awaiting Confirmation' },
+    'confirmed_attended': { color: 'bg-green-100 text-green-800', text: '✅ Confirmed' },
+    'no_show': { color: 'bg-red-100 text-red-800', text: '❌ No Show' },
+    'rejected': { color: 'bg-orange-100 text-orange-800', text: '🚫 Rejected' },
+    'cancelled': { color: 'bg-gray-100 text-gray-800', text: '📵 Cancelled' },
+    // Legacy status values for backward compatibility
+    'pending': { color: 'bg-yellow-100 text-yellow-800', text: 'Pending Confirmation' },
+    'confirmed': { color: 'bg-green-100 text-green-800', text: 'Confirmed' }
   }
   
   const badge = badges[status]
+  
+  // Return null if status not found instead of crashing
+  if (!badge) return null
+  
   return (
     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${badge.color}`}>
       {badge.text}

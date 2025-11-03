@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -17,18 +18,21 @@ export default function Navbar() {
 
     <header className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
       <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-        {/* Logo only, no text */}
+        {/* Logo with branding */}
         <div
-          className="cursor-pointer select-none"
+          className="cursor-pointer select-none flex items-center gap-3"
           onClick={() => handleNavigate('/')}
         >
-          <img
-  src="/logo.svg"
-  alt="mycanteen logo"
-  className="w-14 h-14 object-contain" // 56px x 56px, can further adjust as needed
-  draggable={false}
-/>
-
+          <Image
+            src="/MyCanteen-logo.jpg"
+            alt="MyCanteen logo"
+            width={48}
+            height={48}
+            className="w-12 h-12 object-cover rounded-lg"
+            draggable={false}
+            priority
+          />
+          <span className="text-xl font-bold text-blue-700 hidden sm:block">MyCanteen</span>
         </div>
 
         {/* Hamburger button for mobile */}

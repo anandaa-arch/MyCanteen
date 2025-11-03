@@ -42,7 +42,6 @@ export default function InventoryTable({ onEdit, onDelete }) {
       const res = await fetch('/api/inventory-items');
       if (!res.ok) throw new Error('Failed to fetch inventory items');
       const data = await res.json();
-      console.log("Fetched inventory:", data);
       setItems(data);
       setFilteredItems(data);
     } catch (err) {
@@ -170,6 +169,10 @@ export default function InventoryTable({ onEdit, onDelete }) {
       const res = await fetch(`/api/inventory-items/${itemId}`, { method: 'DELETE' });
       if (res.ok) {
         fetchItems(); // Refresh the list
+        alert('✅ Item deleted successfully!');
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Failed to delete item');
       }
     } catch (err) {
       console.error('Error deleting item:', err);
@@ -184,7 +187,7 @@ export default function InventoryTable({ onEdit, onDelete }) {
           <Loader className="h-8 w-8 text-blue-500 animate-spin mr-3" />
           <div>
             <p className="text-gray-600 text-lg font-medium">Loading inventory...</p>
-            <p className="text-gray-400 text-sm">Fetching items from database</p>
+            <p className="text-gray-600 text-sm font-medium">Fetching items from database</p>
           </div>
         </div>
       </div>
@@ -391,7 +394,7 @@ export default function InventoryTable({ onEdit, onDelete }) {
                               SKU: {item.sku || 'N/A'}
                             </div>
                             {item.supplier && (
-                              <div className="text-xs text-gray-400">
+                              <div className="text-xs text-gray-600 font-medium">
                                 Supplier: {item.supplier}
                               </div>
                             )}

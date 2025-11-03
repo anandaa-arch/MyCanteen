@@ -10,14 +10,11 @@ const supabaseAdmin = createClient(
 
 export async function createAuthUser({ email, password, full_name, role }) {
   try {
+    // Create auth user without user_metadata (role stored in profiles_new only)
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,   // ✅ Correct key
-      user_metadata: {
-        full_name,
-        role
-      }
+      email_confirm: true
     })
 
     if (error) throw error

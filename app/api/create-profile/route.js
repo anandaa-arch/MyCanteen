@@ -7,28 +7,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-// Helper: generate custom SMC user ID
-async function generateSMCUserId(year) {
-  const { data: lastUser, error } = await supabaseAdmin
-    .from('profiles_new')
-    .select('user_id')
-    .like('user_id', `SMC-${year}-%`)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  if (error && error.code !== 'PGRST116') throw error
-
-  let lastNumber = 0
-  if (lastUser?.user_id) {
-    const parts = lastUser.user_id.split('-')
-    lastNumber = parseInt(parts[2], 10)
-  }
-
-  const nextNumber = lastNumber + 1
-  return `SMC-${year}-${nextNumber.toString().padStart(4, '0')}`
-}
-
 export async function POST(req) {
   try {
     const body = await req.json()
@@ -50,47 +28,41 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Email already exists in Auth' }, { status: 400 })
     }
 
-    // 3️⃣ Create Auth user (role fixed: "user")
+    // 3️⃣ Create Auth user (no user_metadata - role stored in profiles_new only)
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
-      user_metadata: { role: 'user', full_name }
+      email_confirm: true
     })
     if (authError) throw authError
 
     const authUserId = authUser.user.id
 
-    // 4️⃣ Generate custom SMC user_id
-    const user_id = await generateSMCUserId(year || new Date().getFullYear())
-
-    // 5️⃣ Insert profile into profiles_new
+    // 4️⃣ Insert profile into profiles_new (matching actual table schema)
     const profileData = {
-      id: authUserId,                 // FK to auth.users
-      user_id,
+      id: authUserId,                    // FK to auth.users (UUID)
+      email: email.trim().toLowerCase(), // Store email in profiles_new too
       full_name,
-      email,
-      department: dept || null,
-      academic_year: year || null,
-      contact_number: contact_number || null,
       role: 'user',
-      total_bill: 0,
-      last_poll_at: null,
-      onboarding_complete: false,
-      created_at: new Date().toISOString()
+      dept: dept || null,
+      year: year || null,
+      contact_number: contact_number || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
     const { error: profileError } = await supabaseAdmin.from('profiles_new').insert([profileData])
     if (profileError) {
+      console.error('❌ Profile insert error:', profileError)
       // Rollback Auth user if profile insert fails
       await supabaseAdmin.auth.admin.deleteUser(authUserId)
-      return NextResponse.json({ error: 'Database error creating new user' }, { status: 500 })
+      return NextResponse.json({ error: `Database error: ${profileError.message}` }, { status: 500 })
     }
 
-    // 6️⃣ Return success
+    // 5️⃣ Return success
     return NextResponse.json({
       success: true,
-      user_id,
+      user_id: authUserId,  // Return the UUID as user_id
       email,
       full_name,
       role: 'user'

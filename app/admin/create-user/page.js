@@ -59,7 +59,7 @@ export default function CreateUserPage() {
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow">
-      <h1 className="text-xl font-bold mb-4">Create New User</h1>
+      <h1 className="text-2xl font-bold mb-6 text-gray-900">Create New User</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="text"
@@ -67,7 +67,7 @@ export default function CreateUserPage() {
           placeholder="Full Name"
           value={formData.full_name}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 bg-white"
           required
         />
         <input
@@ -76,7 +76,7 @@ export default function CreateUserPage() {
           placeholder="Email"
           value={formData.email}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 bg-white"
           required
         />
         <input
@@ -85,7 +85,7 @@ export default function CreateUserPage() {
           placeholder="Password"
           value={formData.password}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 bg-white"
           required
         />
         <input
@@ -94,7 +94,7 @@ export default function CreateUserPage() {
           placeholder="Department"
           value={formData.dept}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 bg-white"
         />
         <input
           type="text"
@@ -102,7 +102,7 @@ export default function CreateUserPage() {
           placeholder="Academic Year"
           value={formData.year}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 bg-white"
         />
         <input
           type="text"
@@ -110,20 +110,20 @@ export default function CreateUserPage() {
           placeholder="Phone Number"
           value={formData.contact_number}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 bg-white"
         />
 
       
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:opacity-50"
+          className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
           {loading ? 'Creating...' : 'Create User'}
         </button>
       </form>
 
-      {message && <p className="mt-4 text-center">{message}</p>}
+      {message && <p className="mt-4 text-center font-medium text-gray-900">{message}</p>}
     </div>
   )
 }

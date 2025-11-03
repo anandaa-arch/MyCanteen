@@ -6,9 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "node scripts/seed-dev-data.js",
+    "seed:help": "node scripts/seed-dev-data.js --help"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.52.1",
     "@vercel/speed-insights": "^1.2.0",
@@ -18,15 +21,17 @@
     "pdfkit": "^0.17.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-qrcode-logo": "^3.0.0"
+    "react-hook-form": "^7.65.0",
+    "react-qrcode-logo": "^3.0.0",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/node": "^18.0.0",
     "@types/react": "19.1.11",
     "eslint": "^9",
     "eslint-config-next": "15.4.4",
-    "tailwindcss": "^4",
-    "@types/node": "^18.0.0"
+    "tailwindcss": "^4"
   }
 }

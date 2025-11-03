@@ -40,7 +40,11 @@ export default function InventoryItemForm({ onAdded }) {
           current_stock: '',
           supplier: ''
         });
-        onAdded?.(data);
+        // Call the callback to refresh parent component
+        if (onAdded) {
+          onAdded(data);
+        }
+        alert('✅ Item added successfully!');
       } else {
         alert(data.error || 'Failed to add item');
       }

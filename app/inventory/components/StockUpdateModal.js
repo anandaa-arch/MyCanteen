@@ -34,7 +34,10 @@ export default function StockUpdateModal({ item, onClose, onUpdated }) {
 
       const data = await res.json();
       if (res.ok) {
-        onUpdated?.(data);
+        alert('✅ Stock updated successfully!');
+        if (onUpdated) {
+          onUpdated(data);
+        }
         onClose();
       } else {
         alert(data.error || 'Failed to update stock');

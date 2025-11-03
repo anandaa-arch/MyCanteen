@@ -51,7 +51,7 @@ export default function StatsCards({ totalUsers, activeUsers, adminUsers, totalR
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-              <p className="text-3xl font-bold text-yellow-600 mt-1">₹{totalRevenue.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-yellow-600 mt-1">₹{(totalRevenue || 0).toLocaleString()}</p>
               <p className="text-xs text-gray-500 mt-1">From transactions</p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">

@@ -1,40 +1,132 @@
-// app/api/inventory-items/route.js
-import { createClient } from '@supabase/supabase-js';
+// app/api/inventory-items/route.js - SECURED
+import { getSupabaseRouteClient } from '@/lib/supabaseRouteHandler';
 import { NextResponse } from 'next/server';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+export async function GET(request) {
+  try {
+    const supabase = await getSupabaseRouteClient();
+    
+    // 1. Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please login' },
+        { status: 401 }
+      );
+    }
 
-export async function GET() {
-  const { data, error } = await supabaseAdmin
-    .from('inventory_items')
-    .select('*')
-    .order('name');
+    // 2. Check admin role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles_new')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+    if (profileError || profile?.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden - Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    // 3. Fetch inventory items
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .select('*')
+      .order('name');
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Inventory items GET error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function POST(request) {
-  const body = await request.json();
-  const { name, category, unit_price, selling_price, current_stock, supplier, unit } = body;
+  try {
+    const supabase = await getSupabaseRouteClient();
+    
+    // 1. Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please login' },
+        { status: 401 }
+      );
+    }
 
-  const { data, error } = await supabaseAdmin
-    .from('inventory_items')
-    .insert([{
-      name,
-      category,
-      unit: unit || 'pcs',
-      unit_price: parseFloat(unit_price || 0),
-      selling_price: selling_price ? parseFloat(selling_price) : null,
-      current_stock: parseInt(current_stock || 0),
-      supplier
-    }])
-    .select()
-    .single();
+    // 2. Check admin role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles_new')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json(data);
+    if (profileError || profile?.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden - Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    // 3. Validate and create inventory item
+    const body = await request.json();
+    const { name, category, unit_price, selling_price, current_stock, supplier, unit } = body;
+
+    // Input validation
+    if (!name || !category) {
+      return NextResponse.json(
+        { error: 'Name and category are required' },
+        { status: 400 }
+      );
+    }
+
+    const parsedUnitPrice = parseFloat(unit_price || 0);
+    const parsedSellingPrice = selling_price ? parseFloat(selling_price) : null;
+    const parsedStock = parseInt(current_stock || 0);
+
+    if (isNaN(parsedUnitPrice) || parsedUnitPrice < 0) {
+      return NextResponse.json(
+        { error: 'Invalid unit price' },
+        { status: 400 }
+      );
+    }
+
+    if (parsedSellingPrice !== null && (isNaN(parsedSellingPrice) || parsedSellingPrice < 0)) {
+      return NextResponse.json(
+        { error: 'Invalid selling price' },
+        { status: 400 }
+      );
+    }
+
+    if (isNaN(parsedStock) || parsedStock < 0) {
+      return NextResponse.json(
+        { error: 'Invalid stock quantity' },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('inventory_items')
+      .insert([{
+        name: name.trim(),
+        category: category.trim(),
+        unit: unit?.trim() || 'pcs',
+        unit_price: parsedUnitPrice,
+        selling_price: parsedSellingPrice,
+        current_stock: parsedStock,
+        supplier: supplier?.trim() || null
+      }])
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Inventory items POST error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

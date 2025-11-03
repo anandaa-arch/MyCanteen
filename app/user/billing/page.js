@@ -3,15 +3,19 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSupabaseClient } from '@/lib/supabaseClient';
+import { getFromCache, setInCache } from '@/lib/cache';
 import BillingHeader from './components/BillingHeader';
 import BillingStatsCards from './components/BillingStatsCards';
 import BillingHistory from './components/BillingHistory';
 import { CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { BillingErrorBoundary } from '@/components/PageErrorBoundary';
+import { FullPageLoader } from '@/components/LoadingSpinner';
+import { BillingSkeleton } from '@/components/Skeleton';
 
-export default function UserBillingPage() {
+function UserBillingPageContent() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = useSupabaseClient();
 
   // State management
   const [currentUser, setCurrentUser] = useState(null);
@@ -50,7 +54,7 @@ export default function UserBillingPage() {
 
       setCurrentUser(user);
       setUserProfile(profile);
-      await fetchUserBills(profile.user_id);
+      await fetchUserBills(user.id); // Use user.id instead of profile.user_id
     } catch (error) {
       console.error('Auth error:', error);
       router.push('/login');
@@ -61,11 +65,22 @@ export default function UserBillingPage() {
 
   const fetchUserBills = async (userId) => {
     try {
+      // Check cache first (cache for 10 minutes)
+      const cacheKey = `user_bills_${userId}`;
+      const cachedBills = getFromCache(cacheKey);
+      
+      if (cachedBills) {
+        setBills(cachedBills);
+        return;
+      }
+
       const response = await fetch(`/api/billing?action=get-user-bills&userId=${userId}`);
       
       if (response.ok) {
         const data = await response.json();
-        setBills(data.bills || []);
+        const billsData = data.bills || [];
+        setInCache(cacheKey, billsData, 600); // Cache for 10 minutes
+        setBills(billsData);
       }
     } catch (error) {
       console.error('Error fetching bills:', error);
@@ -97,13 +112,8 @@ export default function UserBillingPage() {
     totalDue: bills.reduce((sum, bill) => sum + (bill.due_amount || 0), 0),
     totalMeals: bills.reduce((sum, bill) => sum + (bill.half_meal_count || 0) + (bill.full_meal_count || 0), 0),
   };
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <BillingSkeleton />;
   }
 
   return (
@@ -120,5 +130,13 @@ export default function UserBillingPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function UserBillingPage() {
+  return (
+    <BillingErrorBoundary>
+      <UserBillingPageContent />
+    </BillingErrorBoundary>
   );
 }

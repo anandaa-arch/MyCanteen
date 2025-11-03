@@ -27,7 +27,7 @@ const BillingHeader = ({ userProfile }) => {
           <div className="flex items-center gap-3">
             <div className="text-right">
               <div className="text-sm font-medium text-gray-900">{userProfile?.full_name}</div>
-              <div className="text-xs text-gray-500">{userProfile?.user_id}</div>
+              <div className="text-xs text-gray-500">{userProfile?.email}</div>
             </div>
           </div>
         </div>

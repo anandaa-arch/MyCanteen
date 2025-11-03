@@ -1,9 +1,15 @@
 // components/dashboard/UserTable.js - Cleaned version without poll functionality
 'use client'
 
+import { useState } from 'react';
 import { Eye, Users, User, Mail, Phone, Calendar } from 'lucide-react';
+import Pagination from '@/components/Pagination';
+import { SkeletonTable } from '@/components/Skeleton';
 
 const UserTable = ({ users, onViewUser, loading }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const getRoleBadge = (role) => {
     const roleStyles = {
       admin: "bg-red-100 text-red-800",
@@ -29,12 +35,11 @@ const UserTable = ({ users, onViewUser, loading }) => {
 
   if (loading) {
     return (
-      <div className="px-6 py-8">
-        <div className="animate-pulse space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 bg-gray-200 rounded-lg"></div>
-          ))}
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600">
+          <h2 className="text-xl font-bold text-white">User Management</h2>
         </div>
+        <SkeletonTable rows={10} columns={6} />
       </div>
     );
   }
@@ -55,6 +60,21 @@ const UserTable = ({ users, onViewUser, loading }) => {
     if (a.role !== 'admin' && b.role === 'admin') return 1;
     return new Date(b.created_at) - new Date(a.created_at);
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = sortedUsers.slice(startIndex, endIndex);
+
+  const handlePageChange = (page, newItemsPerPage) => {
+    if (newItemsPerPage && newItemsPerPage !== itemsPerPage) {
+      setItemsPerPage(newItemsPerPage);
+      setCurrentPage(page);
+    } else {
+      setCurrentPage(page);
+    }
+  };
 
   return (
     <div className="px-6 py-4">
@@ -91,7 +111,7 @@ const UserTable = ({ users, onViewUser, loading }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {sortedUsers.map((user) => (
+              {paginatedUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -156,11 +176,17 @@ const UserTable = ({ users, onViewUser, loading }) => {
           </table>
         </div>
         
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>
-              Showing {users.length} user{users.length !== 1 ? 's' : ''}
-            </span>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={sortedUsers.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          itemsName="users"
+        />
+        
+        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-center text-sm text-gray-600">
             <span>
               {users.filter(u => u.role === 'admin').length} admin{users.filter(u => u.role === 'admin').length !== 1 ? 's' : ''} • {' '}
               {users.filter(u => u.role === 'user').length} regular user{users.filter(u => u.role === 'user').length !== 1 ? 's' : ''}

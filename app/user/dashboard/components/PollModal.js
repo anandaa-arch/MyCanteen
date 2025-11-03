@@ -87,8 +87,8 @@ export default function PollModal({
 
           {/* Warning for confirmed responses */}
           {userStats.confirmationStatus === 'confirmed' && (
-            <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
-              <p className="text-sm text-orange-800">
+            <div className="bg-orange-100 border border-orange-400 rounded-md p-3">
+              <p className="text-sm font-medium text-orange-800">
                 ⚠️ Your previous response has already been confirmed by the admin. 
                 Updating will require new admin confirmation.
               </p>

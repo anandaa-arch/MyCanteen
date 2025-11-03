@@ -1,4 +1,4 @@
-// components/dashboard/UserDetailModal.js - Fixed version
+// components/dashboard/UserDetailModal.js - Updated with default values
 'use client'
 
 import { useState, useEffect } from 'react';
@@ -17,8 +17,8 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
     full_name: '',
     email: '',
     contact_number: '',
-    department: '',
-    academic_year: ''
+    dept: 'CS',  // Default value
+    year: 'FE'   // Default value
   });
 
   // Reset form data whenever user changes or modal opens
@@ -28,8 +28,8 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
         full_name: user.full_name || '',
         email: user.email || '',
         contact_number: user.contact_number || '',
-        department: user.department || '',
-        academic_year: user.academic_year || ''
+        dept: user.dept || 'CS', // Default to CS if null
+        year: user.year || 'FE'  // Default to FE if null
       });
       // Reset states when user changes
       setIsEditing(false);
@@ -77,21 +77,23 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
     setError('');
 
     try {
+      const updatePayload = {
+        userId: user.id,
+        updateData: {
+          full_name: formData.full_name.trim(),
+          email: formData.email.trim(),
+          contact_number: formData.contact_number?.trim() || null,
+          dept: formData.dept || null,
+          year: formData.year || null
+        }
+      };
+
       const response = await fetch('/api/admin/update-user', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: user.id,
-          updateData: {
-            full_name: formData.full_name.trim(),
-            email: formData.email.trim(),
-            contact_number: formData.contact_number?.trim() || null,
-            department: formData.department?.trim() || null,
-            academic_year: formData.academic_year || null
-          }
-        })
+        body: JSON.stringify(updatePayload)
       });
 
       const result = await response.json();
@@ -109,10 +111,10 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
         onUserUpdate(result.user);
       }
 
-      // Auto-close success message after 3 seconds
+      // Auto-close success message after 2 seconds
       setTimeout(() => {
         setSuccess('');
-      }, 3000);
+      }, 2000);
 
     } catch (error) {
       console.error('Error updating user:', error);
@@ -128,8 +130,8 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
       full_name: user.full_name || '',
       email: user.email || '',
       contact_number: user.contact_number || '',
-      department: user.department || '',
-      academic_year: user.academic_year || ''
+      dept: user.dept || 'CS',  // Default to CS if null
+      year: user.year || 'FE'   // Default to FE if null
     });
     setIsEditing(false);
     setError('');
@@ -170,14 +172,13 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
       type: 'text'
     },
     { 
-      key: 'department',
+      key: 'dept',
       label: 'Department', 
-      value: isEditing ? formData.department : (user.department || 'N/A'), 
+      value: isEditing ? formData.dept : (user.dept || 'N/A'), 
       icon: Users,
       editable: true,
       type: 'select',
       options: [
-        { value: '', label: 'Select Department' },
         { value: 'CS', label: 'Computer Science' },
         { value: 'IT', label: 'Information Technology' },
         { value: 'EXTC', label: 'Electronics & Telecommunications' },
@@ -187,14 +188,13 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
       ]
     },
     { 
-      key: 'academic_year',
+      key: 'year',
       label: 'Year', 
-      value: isEditing ? formData.academic_year : (user.academic_year || 'N/A'), 
+      value: isEditing ? formData.year : (user.year || 'N/A'), 
       icon: Calendar,
       editable: true,
       type: 'select',
       options: [
-        { value: '', label: 'Select Year' },
         { value: 'FE', label: 'First Year (FE)' },
         { value: 'SE', label: 'Second Year (SE)' },
         { value: 'TE', label: 'Third Year (TE)' },

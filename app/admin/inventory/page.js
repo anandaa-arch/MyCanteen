@@ -14,13 +14,14 @@ import {
   BarChart3
 } from 'lucide-react';
 
-// Import your enhanced components
 import ExpenseTable from '../../inventory/components/ExpenseTable';
 import InventoryTable from '../../inventory/components/InventoryTable';
 import ExpenseForm from '../../inventory/components/ExpenseForm';
 import InventoryItemForm from '../../inventory/components/InventoryItemForm';
+import { InventoryErrorBoundary } from '@/components/PageErrorBoundary';
 
-export default function InventoryManagementPage() {
+function InventoryManagementPageContent() {
+
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboardStats, setDashboardStats] = useState({
@@ -398,5 +399,13 @@ export default function InventoryManagementPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function InventoryManagementPage() {
+  return (
+    <InventoryErrorBoundary>
+      <InventoryManagementPageContent />
+    </InventoryErrorBoundary>
   );
 }

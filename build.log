@@ -1,0 +1,61 @@
+
+> mycanteen@0.1.0 build
+> next build
+
+   Γû▓ Next.js 15.5.3
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 19.8s
+   Linting and checking validity of types ...
+
+./app/admin/billing/page.js
+54:6  Warning: React Hook useEffect has a missing dependency: 'checkAuthAndInitialize'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+61:6  Warning: React Hook useEffect has a missing dependency: 'fetchBills'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/admin/dashboard/page.js
+131:6  Warning: React Hook useEffect has missing dependencies: 'fetchRevenueData' and 'fetchUsers'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+145:6  Warning: React Hook useEffect has missing dependencies: 'fetchUsers' and 'loading'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/admin/menu/page.js
+28:6  Warning: React Hook useEffect has a missing dependency: 'checkAuthAndLoad'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/admin/polls/page.js
+27:6  Warning: React Hook useEffect has a missing dependency: 'checkAuthAndInitialize'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+33:6  Warning: React Hook useEffect has a missing dependency: 'fetchPollData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/admin/qr-scanner/page.js
+31:6  Warning: React Hook useEffect has a missing dependency: 'checkAuthAndFetchData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/menu/page.js
+22:6  Warning: React Hook useEffect has a missing dependency: 'checkAuthAndLoadMenu'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/poll/page.js
+27:6  Warning: React Hook useEffect has missing dependencies: 'checkExistingResponse' and 'supabase.auth'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/profile/page.js
+18:6  Warning: React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/qr/page.js
+16:6  Warning: React Hook useEffect has a missing dependency: 'fetchProfileAndGenerateQR'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/qr-debug/page.js
+18:6  Warning: React Hook useEffect has a missing dependency: 'testQRGeneration'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/user/billing/page.js
+32:6  Warning: React Hook useEffect has a missing dependency: 'checkAuthAndInitialize'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/user/dashboard/page.js
+40:6  Warning: React Hook useEffect has a missing dependency: 'checkAuthAndLoadData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/user/meal-history/page.js
+24:6  Warning: React Hook useEffect has a missing dependency: 'checkAuthAndLoadHistory'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/user/qr/page.js
+17:6  Warning: React Hook useEffect has a missing dependency: 'fetchProfileAndGenerateQR'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/QRScanner.js
+77:18  Warning: The ref value 'videoRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'videoRef.current' to a variable inside the effect, and use that variable in the cleanup function.  react-hooks/exhaustive-deps
+80:6  Warning: React Hook useEffect has a missing dependency: 'startScanning'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
