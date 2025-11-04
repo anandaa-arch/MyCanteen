@@ -14,6 +14,7 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [scannedCode, setScannedCode] = useState(null);
   const [permissionStatus, setPermissionStatus] = useState('prompt');
+  const [debugInfo, setDebugInfo] = useState('');
 
   // Request camera permissions first
   const requestCameraPermission = async () => {
@@ -221,11 +222,15 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
           // Only process if it's different from last scanned code
           if (code.data !== scannedCode) {
             console.log('✅ QR Code detected:', code.data);
+            setDebugInfo(`Found: ${code.data.substring(0, 50)}...`);
             
             // Validate the QR code format
             try {
               const qrData = JSON.parse(code.data);
+              console.log('📋 Parsed QR data:', qrData);
+              
               if (qrData.userId && qrData.type === 'attendance') {
+                console.log('✅ Valid attendance QR code!');
                 setScannedCode(code.data);
                 scanningRef.current = false;
                 
@@ -245,22 +250,41 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
               } else {
                 // Invalid format, continue scanning
                 frameCount++;
-                if (frameCount % 60 === 0) { // Log every 60 frames (~2 seconds)
-                  console.log('⚠️ QR code found but invalid format:', qrData);
+                const missing = [];
+                if (!qrData.userId) missing.push('userId');
+                if (!qrData.type) missing.push('type');
+                else if (qrData.type !== 'attendance') missing.push('type=attendance');
+                
+                setDebugInfo(`Invalid: Missing ${missing.join(', ')}`);
+                
+                if (frameCount % 60 === 0) {
+                  console.log('⚠️ QR code found but invalid format. Missing:', missing, 'Data:', qrData);
                 }
               }
             } catch (e) {
               // Not a valid JSON, might be a different QR code
               frameCount++;
+              setDebugInfo(`Not JSON: ${code.data.substring(0, 30)}...`);
+              
               if (frameCount % 60 === 0) {
-                console.log('⚠️ QR code found but not JSON:', code.data.substring(0, 50));
+                console.log('⚠️ QR code found but not JSON:', code.data.substring(0, 100), 'Error:', e.message);
+              }
+              
+              // Try to use it anyway if it looks like it might be valid
+              if (code.data.includes('userId') && code.data.includes('attendance')) {
+                console.log('🔧 Attempting to use malformed JSON...');
+                onScan(code.data);
+                setScannedCode(code.data);
+                scanningRef.current = false;
+                return;
               }
             }
           }
         } else {
           // No code detected, continue scanning
           frameCount++;
-          if (frameCount % 120 === 0) { // Log every 4 seconds
+          if (frameCount % 120 === 0) {
+            setDebugInfo(`Scanning... (${Math.floor(frameCount/30)}s)`);
             console.log('🔍 Scanning... (frame ' + frameCount + ')');
           }
         }
@@ -377,6 +401,13 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
           <div className="text-center text-sm text-gray-600 mb-4">
             {isReady ? '📷 Point camera at QR code' : '⏳ Waiting for camera...'}
           </div>
+
+          {/* Debug Info */}
+          {debugInfo && isReady && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs font-mono text-yellow-800">{debugInfo}</p>
+            </div>
+          )}
 
           {/* Manual Input Option */}
           <div className="border-t pt-4">
