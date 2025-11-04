@@ -224,7 +224,7 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
           // Only process if it's different from last scanned code
           if (code.data !== scannedCode) {
             console.log('✅ QR Code detected:', code.data);
-            setDebugInfo(`Found: ${code.data.substring(0, 50)}...`);
+            setDebugInfo(`Found: ${code.data.substring(0, 50)}... Processing...`);
             
             // Validate the QR code format
             try {
@@ -232,7 +232,8 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
               console.log('📋 Parsed QR data:', qrData);
               
               if (qrData.userId && qrData.type === 'attendance') {
-                console.log('✅ Valid attendance QR code!');
+                console.log('✅ Valid attendance QR code! Submitting...');
+                setDebugInfo(`✅ Valid QR! Submitting attendance...`);
                 setScannedCode(code.data);
                 scanningRef.current = false;
                 
@@ -247,6 +248,7 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
                 document.body.appendChild(successFlash);
                 setTimeout(() => successFlash.remove(), 200);
                 
+                // Call onScan with the data
                 onScan(code.data);
                 return;
               } else {
@@ -255,26 +257,23 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
                 const missing = [];
                 if (!qrData.userId) missing.push('userId');
                 if (!qrData.type) missing.push('type');
-                else if (qrData.type !== 'attendance') missing.push('type=attendance');
+                else if (qrData.type !== 'attendance') missing.push(`type="${qrData.type}" (need "attendance")`);
                 
-                setDebugInfo(`Invalid: Missing ${missing.join(', ')}`);
+                setDebugInfo(`❌ Invalid: Missing ${missing.join(', ')}`);
                 
-                if (frameCount % 60 === 0) {
-                  console.log('⚠️ QR code found but invalid format. Missing:', missing, 'Data:', qrData);
-                }
+                console.log('⚠️ QR code found but invalid format. Missing:', missing, 'Data:', qrData);
               }
             } catch (e) {
               // Not a valid JSON, might be a different QR code
               frameCount++;
-              setDebugInfo(`Not JSON: ${code.data.substring(0, 30)}...`);
+              setDebugInfo(`❌ Not JSON: ${code.data.substring(0, 30)}...`);
               
-              if (frameCount % 60 === 0) {
-                console.log('⚠️ QR code found but not JSON:', code.data.substring(0, 100), 'Error:', e.message);
-              }
+              console.log('⚠️ QR code found but not JSON:', code.data.substring(0, 100), 'Error:', e.message);
               
               // Try to use it anyway if it looks like it might be valid
               if (code.data.includes('userId') && code.data.includes('attendance')) {
                 console.log('🔧 Attempting to use malformed JSON...');
+                setDebugInfo(`⚡ Trying malformed data...`);
                 onScan(code.data);
                 setScannedCode(code.data);
                 scanningRef.current = false;
