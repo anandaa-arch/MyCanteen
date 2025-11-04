@@ -171,17 +171,19 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
 
     return () => {
       scanningRef.current = false;
+      const currentVideo = videoRef.current;
       if (stream) {
         stream.getTracks().forEach(track => {
           track.stop();
           console.log('🛑 Camera stream stopped');
         });
       }
-      if (videoRef.current?.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
+      if (currentVideo?.srcObject) {
+        currentVideo.srcObject.getTracks().forEach(track => track.stop());
+        currentVideo.srcObject = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, selectedDeviceId, permissionStatus]);
 
   const startScanning = () => {

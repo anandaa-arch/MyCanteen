@@ -43,7 +43,7 @@ export default function TestQRPage() {
           <li>Open this page on your <strong>computer</strong></li>
           <li>Make the QR code fullscreen (F11 on most browsers)</li>
           <li>On your <strong>phone</strong>, go to: <code className="bg-yellow-100 px-2 py-1 rounded">mycanteen1.vercel.app/admin/qr-scanner</code></li>
-          <li>Click "Open QR Scanner"</li>
+          <li>Click &quot;Open QR Scanner&quot;</li>
           <li>Point your phone camera at this computer screen</li>
           <li>Watch for the debug panel to show detection status</li>
         </ol>

@@ -12,12 +12,10 @@ export default function UserQRPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchProfileAndGenerateQR();
-  }, []);
-
   const fetchProfileAndGenerateQR = async () => {
     try {
+      setLoading(true);
+      setError("");
       const response = await fetch('/api/user/profile');
       
       if (response.status === 401) {
@@ -51,6 +49,11 @@ export default function UserQRPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProfileAndGenerateQR();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (

@@ -21,36 +21,37 @@ function MealHistoryPageContent() {
   });
 
   useEffect(() => {
+    const checkAuthAndLoadHistory = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles_new')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+        if (!profile || profile.role !== 'user') {
+          router.push('/login');
+          return;
+        }
+
+        await fetchMealHistory(user.id);
+      } catch (error) {
+        console.error('Error:', error);
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     checkAuthAndLoadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const checkAuthAndLoadHistory = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles_new')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile || profile.role !== 'user') {
-        router.push('/login');
-        return;
-      }
-
-      await fetchMealHistory(user.id);
-    } catch (error) {
-      console.error('Error:', error);
-      router.push('/login');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchMealHistory = async (userId) => {
     try {
