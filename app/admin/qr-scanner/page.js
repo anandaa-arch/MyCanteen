@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSupabaseClient } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import QRScanner from '@/components/QRScanner';
+import FastQRScanner from '@/components/FastQRScanner';
 import { CheckCircle, XCircle, Camera, Clock, User, AlertCircle, Loader } from 'lucide-react';
 import { FullPageLoader } from '@/components/LoadingSpinner';
 
@@ -380,7 +380,7 @@ export default function AdminQRScannerPage() {
 
       {/* QR Scanner Modal */}
       {showScanner && (
-        <QRScanner
+        <FastQRScanner
           onScan={handleScan}
           onClose={() => setShowScanner(false)}
           enabled={showScanner}
