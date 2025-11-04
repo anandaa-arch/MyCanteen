@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, X } from 'lucide-react';
-import { Html5Qrcode } from 'html5-qrcode';
 
 export default function FastQRScanner({ onScan, onClose, enabled = true }) {
   const [error, setError] = useState('');
@@ -13,18 +12,22 @@ export default function FastQRScanner({ onScan, onClose, enabled = true }) {
   const hasScannedRef = useRef(false);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || typeof window === 'undefined') return;
 
     let html5QrCode = null;
 
     const startScanner = async () => {
       try {
+        setDebugMsg('Loading scanner...');
+        
+        // Dynamically import html5-qrcode only on client side
+        const { Html5Qrcode } = await import('html5-qrcode');
+        
         setDebugMsg('Starting camera...');
         
         // Create scanner instance
         html5QrCode = new Html5Qrcode("qr-reader");
         scannerRef.current = html5QrCode;
-
         // Configuration for fast scanning
         const config = {
           fps: 10, // Scan 10 frames per second
