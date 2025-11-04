@@ -159,15 +159,13 @@ export default function UserQRPage() {
             <>
               <QRCode
                 value={qrData}
-                size={240}
+                size={280}
                 bgColor="#ffffff"
-                fgColor="#2563eb"
-                qrStyle="dots"
-                eyeRadius={8}
-                logoImage="/MyCanteen-logo.jpg"
-                logoWidth={50}
-                logoHeight={50}
-                removeQrCodeBehindLogo={true}
+                fgColor="#000000"
+                qrStyle="squares"
+                eyeRadius={5}
+                quietZone={20}
+                ecLevel="H"
               />
               <div className="mt-6 text-center">
                 <p className="text-xs text-gray-500 mb-2">QR Code Generated</p>

@@ -196,6 +196,8 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
     
     console.log('🔍 Starting QR code scanning...');
     
+    let frameCount = 0;
+    
     const scan = () => {
       if (!scanningRef.current) return;
 
@@ -210,23 +212,57 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
         // Get image data
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
-        // Decode QR code using jsQR
+        // Try multiple inversion attempts for better detection
         const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
+          inversionAttempts: 'attemptBoth', // Try both normal and inverted colors
         });
         
-        if (code && code.data && code.data !== scannedCode) {
-          console.log('✅ QR Code detected:', code.data);
-          setScannedCode(code.data);
-          scanningRef.current = false;
-          
-          // Vibrate on success (mobile only)
-          if (navigator.vibrate) {
-            navigator.vibrate(200);
+        if (code && code.data) {
+          // Only process if it's different from last scanned code
+          if (code.data !== scannedCode) {
+            console.log('✅ QR Code detected:', code.data);
+            
+            // Validate the QR code format
+            try {
+              const qrData = JSON.parse(code.data);
+              if (qrData.userId && qrData.type === 'attendance') {
+                setScannedCode(code.data);
+                scanningRef.current = false;
+                
+                // Vibrate on success (mobile only)
+                if (navigator.vibrate) {
+                  navigator.vibrate(200);
+                }
+                
+                // Flash success indicator
+                const successFlash = document.createElement('div');
+                successFlash.style.cssText = 'position:fixed;inset:0;background:rgba(34,197,94,0.3);pointer-events:none;z-index:9999;';
+                document.body.appendChild(successFlash);
+                setTimeout(() => successFlash.remove(), 200);
+                
+                onScan(code.data);
+                return;
+              } else {
+                // Invalid format, continue scanning
+                frameCount++;
+                if (frameCount % 60 === 0) { // Log every 60 frames (~2 seconds)
+                  console.log('⚠️ QR code found but invalid format:', qrData);
+                }
+              }
+            } catch (e) {
+              // Not a valid JSON, might be a different QR code
+              frameCount++;
+              if (frameCount % 60 === 0) {
+                console.log('⚠️ QR code found but not JSON:', code.data.substring(0, 50));
+              }
+            }
           }
-          
-          onScan(code.data);
-          return;
+        } else {
+          // No code detected, continue scanning
+          frameCount++;
+          if (frameCount % 120 === 0) { // Log every 4 seconds
+            console.log('🔍 Scanning... (frame ' + frameCount + ')');
+          }
         }
       }
       
