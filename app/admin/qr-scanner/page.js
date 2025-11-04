@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useSupabaseClient } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import FastQRScanner from '@/components/FastQRScanner';
+import QRScanner from '@/components/QRScanner';
 import { CheckCircle, XCircle, Camera, Clock, User, AlertCircle, Loader } from 'lucide-react';
 import { FullPageLoader } from '@/components/LoadingSpinner';
 
@@ -132,6 +132,9 @@ export default function AdminQRScannerPage() {
   const handleScan = async (scannedData) => {
     try {
       setScanning(true);
+      setLastScanResult(null); // Clear previous result
+
+      console.log('📱 Scanning QR data:', scannedData);
 
       // Try the new API first (with auto-poll creation)
       let response = await fetch('/api/attendance-scan', {
@@ -151,6 +154,7 @@ export default function AdminQRScannerPage() {
       }
 
       const result = await response.json();
+      console.log('📊 API Response:', result);
 
       if (!response.ok) {
         setLastScanResult({
@@ -169,18 +173,23 @@ export default function AdminQRScannerPage() {
 
       // Refresh attendance data and poll after a short delay
       setTimeout(async () => {
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Fetch the poll that was just created/used
-        const { data: poll } = await supabase
-          .from('polls')
-          .select('id, poll_date, title')
-          .eq('poll_date', today)
-          .single();
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Fetch the poll that was just created/used
+          const { data: poll } = await supabase
+            .from('polls')
+            .select('id, poll_date, title')
+            .eq('poll_date', today)
+            .single();
 
-        if (poll) {
-          setTodaysPoll(poll);
-          await fetchAttendanceData(poll.id);
+          if (poll) {
+            setTodaysPoll(poll);
+            await fetchAttendanceData(poll.id);
+          }
+        } catch (refreshErr) {
+          console.error('Refresh error:', refreshErr);
+          // Don't crash, just log
         }
       }, 500);
 
@@ -190,10 +199,10 @@ export default function AdminQRScannerPage() {
       }, 2000);
 
     } catch (err) {
-      console.error('Scan error:', err);
+      console.error('❌ Scan error:', err);
       setLastScanResult({
         success: false,
-        message: 'Error recording attendance: ' + err.message,
+        message: 'Error recording attendance: ' + (err.message || 'Unknown error'),
         data: null
       });
     } finally {
@@ -213,7 +222,13 @@ export default function AdminQRScannerPage() {
             <AlertCircle size={24} className="text-red-600 flex-shrink-0 mt-1" />
             <div>
               <h2 className="text-xl font-bold text-red-600 mb-2">Access Denied</h2>
-              <p className="text-gray-700">{error}</p>
+              <p className="text-gray-700 mb-4">{error}</p>
+              <button
+                onClick={() => router.push('/admin/dashboard')}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
+              >
+                ← Go to Dashboard
+              </button>
             </div>
           </div>
         </div>
@@ -226,8 +241,18 @@ export default function AdminQRScannerPage() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-blue-600 mb-2">QR Scanner</h1>
-          <p className="text-gray-600">Scan student QR codes to record attendance</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-blue-600 mb-2">QR Scanner</h1>
+              <p className="text-gray-600">Scan student QR codes to record attendance</p>
+            </div>
+            <button
+              onClick={() => router.push('/admin/dashboard')}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-white rounded-lg transition"
+            >
+              ← Dashboard
+            </button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -380,7 +405,7 @@ export default function AdminQRScannerPage() {
 
       {/* QR Scanner Modal */}
       {showScanner && (
-        <FastQRScanner
+        <QRScanner
           onScan={handleScan}
           onClose={() => setShowScanner(false)}
           enabled={showScanner}
