@@ -237,18 +237,18 @@ export default function AdminQRScannerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-blue-600 mb-2">QR Scanner</h1>
-              <p className="text-gray-600">Scan student QR codes to record attendance</p>
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-blue-600 mb-2">QR Scanner</h1>
+              <p className="text-sm sm:text-base text-gray-600">Scan student QR codes to record attendance</p>
             </div>
             <button
               onClick={() => router.push('/admin/dashboard')}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-white rounded-lg transition"
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-white active:bg-gray-100 rounded-lg transition touch-manipulation"
             >
               ← Dashboard
             </button>
@@ -256,44 +256,44 @@ export default function AdminQRScannerPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-semibold">Total Present</p>
-                <p className="text-3xl font-bold text-blue-600 mt-2">{scanStats.attended}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-semibold">Total Present</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-1 sm:mt-2">{scanStats.attended}</p>
               </div>
-              <CheckCircle size={40} className="text-green-500" />
+              <CheckCircle size={32} className="text-green-500 sm:w-10 sm:h-10 flex-shrink-0 ml-2" />
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-semibold">Pending</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-2">{scanStats.pending}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-semibold">Pending</p>
+                <p className="text-2xl sm:text-3xl font-bold text-yellow-600 mt-1 sm:mt-2">{scanStats.pending}</p>
               </div>
-              <Clock size={40} className="text-yellow-500" />
+              <Clock size={32} className="text-yellow-500 sm:w-10 sm:h-10 flex-shrink-0 ml-2" />
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-semibold">Total Responses</p>
-                <p className="text-3xl font-bold text-indigo-600 mt-2">{scanStats.total}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-600 text-xs sm:text-sm font-semibold">Total Responses</p>
+                <p className="text-2xl sm:text-3xl font-bold text-indigo-600 mt-1 sm:mt-2">{scanStats.total}</p>
               </div>
-              <User size={40} className="text-indigo-500" />
+              <User size={32} className="text-indigo-500 sm:w-10 sm:h-10 flex-shrink-0 ml-2" />
             </div>
           </div>
         </div>
 
         {/* Scan Button */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <button
             onClick={() => setShowScanner(true)}
             disabled={scanning}
-            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-4 rounded-2xl transition shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 active:from-blue-800 active:to-indigo-800 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-4 sm:py-5 rounded-xl sm:rounded-2xl transition shadow-lg hover:shadow-xl active:shadow-2xl flex items-center justify-center gap-3 touch-manipulation text-base sm:text-lg"
           >
             {scanning ? (
               <>
@@ -311,32 +311,32 @@ export default function AdminQRScannerPage() {
 
         {/* Last Scan Result */}
         {lastScanResult && (
-          <div className={`mb-8 p-6 rounded-2xl ${
+          <div className={`mb-6 sm:mb-8 p-4 sm:p-6 rounded-xl sm:rounded-2xl ${
             lastScanResult.success 
               ? 'bg-green-50 border-2 border-green-200' 
               : 'bg-red-50 border-2 border-red-200'
           }`}>
-            <div className="flex gap-4 items-start">
+            <div className="flex gap-3 sm:gap-4 items-start">
               {lastScanResult.success ? (
-                <CheckCircle size={24} className="text-green-600 flex-shrink-0 mt-1" />
+                <CheckCircle size={20} className="text-green-600 flex-shrink-0 mt-1 sm:w-6 sm:h-6" />
               ) : (
-                <XCircle size={24} className="text-red-600 flex-shrink-0 mt-1" />
+                <XCircle size={20} className="text-red-600 flex-shrink-0 mt-1 sm:w-6 sm:h-6" />
               )}
-              <div className="flex-1">
-                <p className={`font-bold ${lastScanResult.success ? 'text-green-800' : 'text-red-800'}`}>
+              <div className="flex-1 min-w-0">
+                <p className={`font-bold text-sm sm:text-base ${lastScanResult.success ? 'text-green-800' : 'text-red-800'}`}>
                   {lastScanResult.message}
                 </p>
                 {lastScanResult.data && (
-                  <div className="mt-3 text-sm space-y-1 text-gray-700">
-                    <p><strong>Name:</strong> {lastScanResult.data.userName}</p>
-                    <p><strong>Email:</strong> {lastScanResult.data.userEmail}</p>
+                  <div className="mt-3 text-xs sm:text-sm space-y-1 text-gray-700">
+                    <p className="break-words"><strong>Name:</strong> {lastScanResult.data.userName}</p>
+                    <p className="break-all"><strong>Email:</strong> {lastScanResult.data.userEmail}</p>
                     <p><strong>Time:</strong> {new Date(lastScanResult.data.attendedAt).toLocaleTimeString()}</p>
                   </div>
                 )}
               </div>
               <button
                 onClick={() => setLastScanResult(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 active:text-gray-800 p-1 touch-manipulation flex-shrink-0"
               >
                 ✕
               </button>
@@ -345,60 +345,95 @@ export default function AdminQRScannerPage() {
         )}
 
         {/* Recent Scans */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-            <h2 className="text-xl font-bold">Recent Attendance</h2>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+            <h2 className="text-lg sm:text-xl font-bold">Recent Attendance</h2>
           </div>
 
           {recentScans.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Camera size={40} className="mx-auto mb-4 opacity-50" />
-              <p>No attendance records yet. Start scanning QR codes.</p>
+            <div className="p-6 sm:p-8 text-center text-gray-500">
+              <Camera size={32} className="mx-auto mb-4 opacity-50 sm:w-10 sm:h-10" />
+              <p className="text-sm sm:text-base">No attendance records yet. Start scanning QR codes.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b">
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Dept</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Time</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentScans.map((scan, idx) => (
-                    <tr key={scan.id} className={`border-b ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-800">
-                        {scan.profiles_new?.full_name || 'Unknown'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {scan.profiles_new?.email || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {scan.profiles_new?.dept || '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          scan.confirmation_status === 'confirmed_attended'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {scan.confirmation_status === 'confirmed_attended' ? '✓ Present' : 'Pending'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(scan.created_at).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </td>
+            <>
+              {/* Desktop Table View - Hidden on mobile */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Dept</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Time</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {recentScans.map((scan, idx) => (
+                      <tr key={scan.id} className={`border-b ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-800">
+                          {scan.profiles_new?.full_name || 'Unknown'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {scan.profiles_new?.email || '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {scan.profiles_new?.dept || '-'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            scan.confirmation_status === 'confirmed_attended'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {scan.confirmation_status === 'confirmed_attended' ? '✓ Present' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {new Date(scan.created_at).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View - Visible only on mobile */}
+              <div className="md:hidden divide-y divide-gray-200">
+                {recentScans.map((scan) => (
+                  <div key={scan.id} className="p-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900 text-sm">
+                        {scan.profiles_new?.full_name || 'Unknown'}
+                      </h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        scan.confirmation_status === 'confirmed_attended'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {scan.confirmation_status === 'confirmed_attended' ? '✓ Present' : 'Pending'}
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-xs text-gray-600">
+                      <p className="truncate">{scan.profiles_new?.email || '-'}</p>
+                      <div className="flex justify-between items-center">
+                        <span>{scan.profiles_new?.dept || '-'}</span>
+                        <span className="font-medium">
+                          {new Date(scan.created_at).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>

@@ -77,16 +77,17 @@ const UserTable = ({ users, onViewUser, loading }) => {
   };
 
   return (
-    <div className="px-6 py-4">
+    <div className="px-4 sm:px-6 py-4">
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
-          <p className="text-sm text-gray-600 mt-1">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">User Management</h3>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             Manage user accounts and permissions
           </p>
         </div>
         
-        <div className="overflow-x-auto">
+        {/* Desktop Table View - Hidden on mobile */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
@@ -174,6 +175,69 @@ const UserTable = ({ users, onViewUser, loading }) => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View - Visible only on mobile */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {paginatedUsers.map((user) => (
+            <div key={user.id} className="p-4 hover:bg-gray-50 transition-colors duration-150">
+              {/* User Header */}
+              <div className="flex items-start gap-3 mb-3">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  user.role === 'admin' ? 'bg-red-100' : 'bg-blue-100'
+                }`}>
+                  <User className={`w-6 h-6 ${
+                    user.role === 'admin' ? 'text-red-600' : 'text-blue-600'
+                  }`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="text-sm font-semibold text-gray-900 truncate">
+                      {user.full_name || 'N/A'}
+                    </h4>
+                    {getRoleBadge(user.role)}
+                  </div>
+                  <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
+                    <Mail size={10} />
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+
+              {/* User Details Grid */}
+              <div className="space-y-2 mb-3">
+                {user.contact_number && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <Phone size={12} />
+                      Contact
+                    </span>
+                    <span className="text-gray-900 font-medium">{user.contact_number}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500 flex items-center gap-1">
+                    <Calendar size={12} />
+                    Joined
+                  </span>
+                  <span className="text-gray-900 font-medium">{formatDate(user.created_at)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500">Total Bill</span>
+                  <span className="text-gray-900 font-semibold">₹{user.total_bill || 0}</span>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={() => onViewUser(user)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200"
+              >
+                <Eye size={16} />
+                View Details
+              </button>
+            </div>
+          ))}
         </div>
         
         <Pagination

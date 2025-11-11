@@ -27,36 +27,36 @@ const getConfirmationBadge = (status) => {
 
 export default function StatsCards({ userStats }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
       {/* Total Bill Card */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900">Total Bill</h3>
-        <p className="text-3xl font-bold text-green-600 mt-2">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Total Bill</h3>
+        <p className="text-2xl sm:text-3xl font-bold text-green-600 mt-2">
           ₹{userStats.totalBill}
         </p>
       </div>
 
       {/* This Month Card */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900">This Month</h3>
-        <p className="text-3xl font-bold text-blue-600 mt-2">
-          {userStats.thisMonthMeals} meals
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900">This Month</h3>
+        <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-2">
+          {userStats.thisMonthMeals} <span className="text-base sm:text-xl">meals</span>
         </p>
       </div>
 
       {/* Today's Status Card */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-900">Today&apos;s Status</h3>
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow sm:col-span-2 lg:col-span-1">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Today&apos;s Status</h3>
         <div className="mt-2">
           {userStats.todaysPollResponse ? (
             <div>
-              <p className="text-lg font-bold text-blue-600">
+              <p className="text-base sm:text-lg font-bold text-blue-600 mb-2">
                 {userStats.todaysPollResponse.present ? 'Attending' : 'Not Attending'}
               </p>
               {getConfirmationBadge(userStats.confirmationStatus)}
             </div>
           ) : (
-            <p className="text-lg font-bold text-yellow-600">No response yet</p>
+            <p className="text-base sm:text-lg font-bold text-yellow-600">No response yet</p>
           )}
         </div>
       </div>

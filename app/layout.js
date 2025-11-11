@@ -24,13 +24,13 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en" className="scroll-smooth">
-      <body className="min-h-screen flex flex-col">
+      <body className="min-h-screen flex flex-col antialiased bg-gray-50">
         <GlobalErrorBoundary>
           <NotificationContainer 
             notifications={notifications} 
             onRemove={removeNotification} 
           />
-          <main className="flex-grow pb-20">{children}</main>
+          <main className="flex-grow w-full pb-16 sm:pb-20">{children}</main>
         </GlobalErrorBoundary>
       </body>
     </html>

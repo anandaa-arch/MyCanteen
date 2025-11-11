@@ -206,13 +206,13 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
   const renderField = (field) => {
     if (!isEditing || !field.editable) {
       return (
-        <div key={field.key} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+        <div key={field.key} className="flex items-center gap-2 sm:gap-3 p-3 sm:p-3.5 bg-gray-50 rounded-lg">
+          <div className="w-9 h-9 sm:w-8 sm:h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
             <field.icon className="w-4 h-4 text-gray-600" />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{field.label}</p>
-            <p className="text-sm font-medium text-gray-900 mt-1">
+            <p className="text-sm font-medium text-gray-900 mt-1 break-words">
               {field.value || 'N/A'}
               {field.key === 'role' && (
                 <span className={`ml-2 inline-flex px-2 py-1 text-xs font-medium rounded-full ${
@@ -230,11 +230,11 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
     }
 
     return (
-      <div key={field.key} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+      <div key={field.key} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 sm:p-3.5 bg-gray-50 rounded-lg">
+        <div className="hidden sm:flex w-8 h-8 bg-white rounded-lg items-center justify-center flex-shrink-0">
           <field.icon className="w-4 h-4 text-gray-600" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <label className="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-2">
             {field.label}
           </label>
@@ -242,7 +242,7 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
             <select
               value={field.value || ''}
               onChange={(e) => handleInputChange(field.key, e.target.value)}
-              className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-md px-3 py-3 sm:py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-manipulation"
             >
               {field.options?.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -255,7 +255,7 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
               type={field.type}
               value={field.value || ''}
               onChange={(e) => handleInputChange(field.key, e.target.value)}
-              className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-300 rounded-md px-3 py-3 sm:py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-manipulation"
               placeholder={`Enter ${field.label.toLowerCase()}`}
             />
           )}
@@ -265,26 +265,26 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center md:p-4 z-50 backdrop-blur-sm">
+      <div className="bg-white md:rounded-2xl shadow-2xl max-w-md w-full h-full md:h-auto md:max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
               <User className="w-5 h-5 text-blue-600" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                 {isEditing ? 'Edit User' : 'User Details'}
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">
                 {isEditing ? 'Update user information' : 'Complete user information'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-150"
+            className="w-8 h-8 sm:w-9 sm:h-9 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 rounded-full flex items-center justify-center transition-colors duration-150 flex-shrink-0 ml-2"
           >
             <X size={18} className="text-gray-600" />
           </button>
@@ -308,34 +308,34 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
         )}
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
           {userFields.map(renderField)}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+        <div className="px-4 sm:px-6 py-4 border-t border-gray-200 bg-gray-50 md:rounded-b-2xl sticky bottom-0">
           {!isEditing ? (
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => setIsEditing(true)}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200 font-medium flex items-center justify-center gap-2"
+                className="flex-1 bg-blue-600 text-white px-4 py-3 sm:py-2.5 rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 font-medium flex items-center justify-center gap-2 touch-manipulation"
               >
                 <Edit3 size={16} />
                 Edit User
               </button>
               <button
                 onClick={onClose}
-                className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-all duration-200 font-medium"
+                className="flex-1 bg-gray-600 text-white px-4 py-3 sm:py-2.5 rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-all duration-200 font-medium touch-manipulation"
               >
                 Close
               </button>
             </div>
           ) : (
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all duration-200 font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-green-600 text-white px-4 py-3 sm:py-2.5 rounded-lg hover:bg-green-700 active:bg-green-800 transition-all duration-200 font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
               >
                 {loading ? (
                   <>
@@ -352,7 +352,7 @@ const UserDetailModal = ({ user, onClose, onUserUpdate }) => {
               <button
                 onClick={handleCancel}
                 disabled={loading}
-                className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 bg-gray-600 text-white px-4 py-3 sm:py-2.5 rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
               >
                 Cancel
               </button>

@@ -311,30 +311,30 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+      <div className="bg-white md:rounded-lg shadow-2xl w-full h-full md:max-w-lg md:h-auto md:max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
-          <div className="flex items-center gap-2">
-            <Camera size={24} className="text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-800">Scan QR Code</h2>
+        <div className="flex justify-between items-center p-4 sm:p-5 border-b sticky top-0 bg-white z-10 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Camera size={20} className="text-blue-600 sm:w-6 sm:h-6" />
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800">Scan QR Code</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition p-2 hover:bg-gray-100 rounded-full"
+            className="text-gray-500 hover:text-gray-700 active:text-gray-900 transition p-2 hover:bg-gray-100 active:bg-gray-200 rounded-full touch-manipulation"
           >
             <X size={24} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5">
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex gap-3">
-                <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm text-red-700 font-medium">{error}</p>
+            <div className="mb-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex gap-2 sm:gap-3">
+                <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5 sm:w-5 sm:h-5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-red-700 font-medium break-words">{error}</p>
                   {permissionStatus === 'denied' && (
                     <p className="text-xs text-red-600 mt-2">
                       To enable camera: Settings → Privacy → Camera → Enable for your browser
@@ -355,7 +355,7 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
               <select
                 value={selectedDeviceId}
                 onChange={(e) => setSelectedDeviceId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
+                className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900 touch-manipulation"
               >
                 {devices.map((device, index) => (
                   <option key={device.deviceId} value={device.deviceId}>
@@ -366,8 +366,8 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
             </div>
           )}
 
-          {/* Video Stream */}
-          <div className="relative bg-black rounded-lg overflow-hidden mb-4" style={{ aspectRatio: '16/9' }}>
+          {/* Video Stream - Full viewport on mobile */}
+          <div className="relative bg-black rounded-lg overflow-hidden mb-4" style={{ aspectRatio: '16/9', minHeight: '250px' }}>
             <video
               ref={videoRef}
               autoPlay
@@ -399,19 +399,19 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
             )}
           </div>
 
-          <div className="text-center text-sm text-gray-600 mb-4">
+          <div className="text-center text-xs sm:text-sm text-gray-600 mb-4 font-medium">
             {isReady ? '📷 Point camera at QR code' : '⏳ Waiting for camera...'}
           </div>
 
           {/* Debug Info */}
           {debugInfo && isReady && (
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs font-mono text-yellow-800">{debugInfo}</p>
+              <p className="text-xs font-mono text-yellow-800 break-all">{debugInfo}</p>
             </div>
           )}
 
-          {/* Manual Input Option */}
-          <div className="border-t pt-4">
+          {/* Manual Input Option - Hidden on small screens for better UX */}
+          <div className="border-t pt-4 hidden sm:block">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Or paste QR code data manually:
             </label>
@@ -423,20 +423,20 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
                   e.target.value = '';
                 }
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono bg-gray-50 text-gray-900"
+              className="w-full px-4 py-3 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-mono bg-gray-50 text-gray-900 touch-manipulation"
               rows="3"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 bg-gray-50 border-t flex justify-between items-center">
-          <div className="text-xs text-gray-500">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 bg-gray-50 border-t flex justify-between items-center flex-shrink-0">
+          <div className="text-xs sm:text-sm text-gray-500">
             {devices.length} camera{devices.length !== 1 ? 's' : ''} found
           </div>
           <button
             onClick={onClose}
-            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition font-semibold"
+            className="px-5 sm:px-6 py-2.5 sm:py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition font-semibold text-sm sm:text-base touch-manipulation"
           >
             Close
           </button>

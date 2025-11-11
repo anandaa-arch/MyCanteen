@@ -201,7 +201,7 @@ function AdminDashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-6">
       <DashboardHeader
         onCreateUser={handleCreateUser}
         onManagePolls={handleManagePolls}
@@ -210,24 +210,26 @@ function AdminDashboardContent() {
         currentUser={currentUser}
       />
      
-      <StatsCards
-        totalUsers={users.length}
-        activeUsers={users.filter(u => u.role === 'user').length}
-        adminUsers={users.filter(u => u.role === 'admin').length}
-        totalRevenue={totalRevenue}
-      />
+      <div className="max-w-7xl mx-auto">
+        <StatsCards
+          totalUsers={users.length}
+          activeUsers={users.filter(u => u.role === 'user').length}
+          adminUsers={users.filter(u => u.role === 'admin').length}
+          totalRevenue={totalRevenue}
+        />
 
-      <SearchAndFilter 
-        searchTerm={searchTerm} 
-        setSearchTerm={setSearchTerm}
-        placeholder="Search users by name or email..."
-      />
-     
-      <UserTable
-        users={users}
-        onViewUser={(user) => setSelectedUser(user)}
-        loading={loading}
-      />
+        <SearchAndFilter 
+          searchTerm={searchTerm} 
+          setSearchTerm={setSearchTerm}
+          placeholder="Search users by name or email..."
+        />
+       
+        <UserTable
+          users={users}
+          onViewUser={(user) => setSelectedUser(user)}
+          loading={loading}
+        />
+      </div>
      
       <UserDetailModal
         user={selectedUser}
