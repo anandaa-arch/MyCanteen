@@ -41,6 +41,7 @@ function UserDashboardContent() {
 
   useEffect(() => {
     checkAuthAndLoadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Setup real-time payment notifications
@@ -99,6 +100,7 @@ function UserDashboardContent() {
       console.log('🔌 Unsubscribing from real-time updates');
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
 const checkAuthAndLoadData = async () => {

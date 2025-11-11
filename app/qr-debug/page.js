@@ -15,6 +15,7 @@ export default function QRDebugPage() {
 
   useEffect(() => {
     testQRGeneration();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const testQRGeneration = async () => {

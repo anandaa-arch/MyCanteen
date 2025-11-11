@@ -144,7 +144,7 @@ const DashboardHeader = ({ onLogout, currentUser, userProfile }) => {
               className="w-full flex items-center gap-3 text-gray-700 hover:text-blue-700 hover:bg-blue-50 px-4 py-3 rounded-lg transition-all duration-150 text-left font-medium touch-manipulation"
             >
               <Receipt size={18} className="flex-shrink-0" />
-              Today's Poll
+              Today&apos;s Poll
             </button>
 
             <button

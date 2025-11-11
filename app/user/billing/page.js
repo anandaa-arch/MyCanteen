@@ -30,6 +30,7 @@ function UserBillingPageContent() {
 
   useEffect(() => {
     checkAuthAndInitialize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuthAndInitialize = async () => {
