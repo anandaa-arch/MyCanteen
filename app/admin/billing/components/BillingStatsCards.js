@@ -40,16 +40,16 @@ const BillingStatsCards = ({ totalStats }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
       {statsConfig.map(({ title, value, icon: Icon, iconColor, bgColor, format }) => (
-        <div key={title} className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <div key={title} className="bg-white rounded-lg shadow border border-gray-200 p-4 sm:p-6">
           <div className="flex items-center">
-            <div className={`p-2 rounded-lg ${bgColor}`}>
-              <Icon className={`w-8 h-8 ${iconColor}`} />
+            <div className={`p-2 rounded-lg ${bgColor} flex-shrink-0`}>
+              <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${iconColor}`} />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">{title}</p>
-              <p className="text-2xl font-semibold text-gray-900">{format(value)}</p>
+            <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{title}</p>
+              <p className="text-lg sm:text-2xl font-semibold text-gray-900 truncate">{format(value)}</p>
             </div>
           </div>
         </div>
