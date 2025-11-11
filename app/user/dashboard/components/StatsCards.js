@@ -26,8 +26,14 @@ const getConfirmationBadge = (status) => {
 }
 
 export default function StatsCards({ userStats }) {
+  // Get current month and year for display
+  const now = new Date()
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                      'July', 'August', 'September', 'October', 'November', 'December']
+  const currentMonthYear = `${monthNames[now.getMonth()]} ${now.getFullYear()}`
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
       {/* Total Bill Card */}
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900">Total Bill</h3>
@@ -38,14 +44,22 @@ export default function StatsCards({ userStats }) {
 
       {/* This Month Card */}
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900">This Month</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900">{currentMonthYear}</h3>
         <p className="text-2xl sm:text-3xl font-bold text-blue-600 mt-2">
           {userStats.thisMonthMeals} <span className="text-base sm:text-xl">meals</span>
         </p>
       </div>
 
+      {/* All Time Meals Card */}
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900">All Time</h3>
+        <p className="text-2xl sm:text-3xl font-bold text-purple-600 mt-2">
+          {userStats.allTimeMeals || 0} <span className="text-base sm:text-xl">meals</span>
+        </p>
+      </div>
+
       {/* Today's Status Card */}
-      <div className="bg-white p-4 sm:p-6 rounded-lg shadow sm:col-span-2 lg:col-span-1">
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900">Today&apos;s Status</h3>
         <div className="mt-2">
           {userStats.todaysPollResponse ? (

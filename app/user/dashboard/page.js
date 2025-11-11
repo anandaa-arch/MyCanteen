@@ -35,6 +35,7 @@ function UserDashboardContent() {
   const [userStats, setUserStats] = useState({
     totalBill: 0,
     thisMonthMeals: 0,
+    allTimeMeals: 0,
     todaysPollResponse: null,
     confirmationStatus: null
   })
@@ -181,12 +182,14 @@ const checkAuthAndLoadData = async () => {
 
       const { data: allBills } = await supabase
         .from('monthly_bills')
-        .select('total_amount')
+        .select('total_amount, half_meal_count, full_meal_count')
         .eq('user_id', userId)
 
-      // Calculate total bill from all bills and this month's meals
+      // Calculate total bill from all bills, this month's meals, and all-time meals
       const totalBill = allBills?.reduce((sum, bill) => sum + (bill.total_amount || 0), 0) || 0
       const thisMonthMeals = (currentBill?.half_meal_count || 0) + (currentBill?.full_meal_count || 0)
+      const allTimeMeals = allBills?.reduce((sum, bill) => 
+        sum + (bill.half_meal_count || 0) + (bill.full_meal_count || 0), 0) || 0
 
       // Today's poll response
       const today = new Date().toISOString().slice(0, 10)
@@ -213,6 +216,7 @@ const checkAuthAndLoadData = async () => {
       const stats = {
         totalBill: totalBill,
         thisMonthMeals: thisMonthMeals,
+        allTimeMeals: allTimeMeals,
         todaysPollResponse: todaysPoll,
         confirmationStatus: todaysPoll?.confirmation_status || null
       };
