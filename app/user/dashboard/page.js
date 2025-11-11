@@ -185,11 +185,18 @@ const checkAuthAndLoadData = async () => {
         .select('total_amount, half_meal_count, full_meal_count')
         .eq('user_id', userId)
 
-      // Calculate total bill from all bills, this month's meals, and all-time meals
+      // Calculate total bill from all bills
       const totalBill = allBills?.reduce((sum, bill) => sum + (bill.total_amount || 0), 0) || 0
       const thisMonthMeals = (currentBill?.half_meal_count || 0) + (currentBill?.full_meal_count || 0)
-      const allTimeMeals = allBills?.reduce((sum, bill) => 
-        sum + (bill.half_meal_count || 0) + (bill.full_meal_count || 0), 0) || 0
+
+      // Get all-time meals from poll_responses (more accurate than monthly_bills)
+      const { data: allPollResponses } = await supabase
+        .from('poll_responses')
+        .select('portion_size')
+        .eq('user_id', userId)
+        .eq('present', true)
+
+      const allTimeMeals = allPollResponses?.length || 0
 
       // Today's poll response
       const today = new Date().toISOString().slice(0, 10)
