@@ -171,32 +171,30 @@ const checkAuthAndLoadData = async () => {
       const currentMonth = now.getMonth() + 1
       const currentYear = now.getFullYear()
 
-      // Get monthly bills for this month and total from all months
-      const { data: currentBill } = await supabase
-        .from('monthly_bills')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('month', currentMonth)
-        .eq('year', currentYear)
-        .single()
-
+      // Get monthly bills for total bill calculation
       const { data: allBills } = await supabase
         .from('monthly_bills')
-        .select('total_amount, half_meal_count, full_meal_count')
+        .select('total_amount')
         .eq('user_id', userId)
 
       // Calculate total bill from all bills
       const totalBill = allBills?.reduce((sum, bill) => sum + (bill.total_amount || 0), 0) || 0
-      const thisMonthMeals = (currentBill?.half_meal_count || 0) + (currentBill?.full_meal_count || 0)
 
       // Get all-time meals from poll_responses (more accurate than monthly_bills)
       const { data: allPollResponses } = await supabase
         .from('poll_responses')
-        .select('portion_size')
+        .select('date, portion_size')
         .eq('user_id', userId)
         .eq('present', true)
 
       const allTimeMeals = allPollResponses?.length || 0
+
+      // Get this month's meals from poll_responses (more accurate for current month)
+      const thisMonthMeals = allPollResponses?.filter(response => {
+        const responseDate = new Date(response.date)
+        return responseDate.getMonth() + 1 === currentMonth && 
+               responseDate.getFullYear() === currentYear
+      }).length || 0
 
       // Today's poll response
       const today = new Date().toISOString().slice(0, 10)
