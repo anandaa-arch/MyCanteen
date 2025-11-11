@@ -17,7 +17,7 @@ export default function PollModal({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white w-full h-full md:h-auto md:max-w-md md:rounded-lg shadow-lg p-6 sm:p-8 z-10 overflow-y-auto">
         <h3 className="text-xl sm:text-2xl font-semibold mb-6">
-          {userStats.todaysPollResponse ? 'Update Today&apos;s Response' : 'Submit Today&apos;s Response'}
+          {userStats.todaysPollResponse ? 'Update Your Response' : 'Submit Your Response'}
         </h3>
         
         <div className="space-y-6">
@@ -41,7 +41,7 @@ export default function PollModal({
                   disabled={pollLoading}
                   className="w-5 h-5"
                 />
-                <span className="text-base font-medium">Yes, I&apos;ll attend</span>
+                <span className="text-base font-medium">Yes, I will attend</span>
               </label>
               <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition touch-manipulation hover:bg-gray-50 active:bg-gray-100 flex-1"
                      style={{
