@@ -24,6 +24,9 @@ const BillingHistory = ({ bills, getStatusBadge, months }) => {
       <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
       <h3 className="text-lg font-medium text-gray-900 mb-2">No bills found</h3>
       <p className="text-gray-600">Your billing history will appear here once bills are generated.</p>
+      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 inline-block">
+        💡 <strong>Note:</strong> Bills are generated monthly by the admin. If you have attended meals but don&apos;t see bills, the admin may not have generated them yet.
+      </div>
     </div>
   );
 

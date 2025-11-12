@@ -124,6 +124,23 @@ function UserBillingPageContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <BillingStatsCards totalStats={totalStats} />
         
+        {/* Show all bills - paid, pending, and partial */}
+        {bills.length > 0 && (
+          <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-blue-800">
+                <strong>Billing Information:</strong>
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  <li>All your bills are shown below - <strong className="text-green-700">Paid</strong>, <strong className="text-yellow-700">Partially Paid</strong>, and <strong className="text-red-700">Pending</strong></li>
+                  <li>If you have attended meals but don&apos;t see them billed, the admin needs to generate bills for that month</li>
+                  <li>Contact the admin to clear any outstanding dues or if you notice discrepancies</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <BillingHistory 
           bills={bills} 
           getStatusBadge={getStatusBadge} 
