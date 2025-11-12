@@ -247,7 +247,10 @@ export async function GET(request) {
       // Calculate stats
       const present = responses?.filter(r => r.confirmation_status === 'confirmed_attended').length || 0;
       const absent = responses?.filter(r => r.present === false).length || 0;
-      const total = responses?.length || 0;
+      
+      // Only count records where user made a clear choice (present OR absent)
+      // Don't count pending/awaiting confirmation as they haven't finalized attendance
+      const total = present + absent;
       const rate = total > 0 ? Math.round((present / total) * 100) : 0;
 
       return NextResponse.json({
