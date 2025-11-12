@@ -71,6 +71,13 @@ export default function LandingPage() {
   const [todaysStudents, setTodaysStudents] = useState([])
   const [todaysStats, setTodaysStats] = useState({ fullMeals: 0, halfMeals: 0 })
   const [loading, setLoading] = useState(true)
+  
+  // Real-time dashboard stats
+  const [dashboardStats, setDashboardStats] = useState({
+    activeStudents: 0,
+    todaysRevenue: 0,
+    foodUtilization: 0
+  })
 
   useEffect(() => {
     const checkSession = async () => {
@@ -79,7 +86,7 @@ export default function LandingPage() {
     checkSession()
   }, [router])
 
-  // Fetch today's poll responses
+  // Fetch today's poll responses and real-time stats
   useEffect(() => {
     const fetchTodaysStudents = async () => {
       try {
@@ -105,6 +112,25 @@ export default function LandingPage() {
           profiles_new: student.profile // Rename for consistency
         })))
         setTodaysStats(data.stats)
+
+        // Calculate real-time dashboard stats
+        const activeStudents = data.students.length || 0
+        const fullMealPrice = 60
+        const halfMealPrice = 45
+        const todaysRevenue = (data.stats.fullMeals * fullMealPrice) + (data.stats.halfMeals * halfMealPrice)
+        
+        // Calculate food utilization (percentage of students who ordered vs total registered users)
+        // For now, we'll use a simple calculation: (students who ordered / total possible) * 100
+        // You can adjust this based on your actual total student count
+        const totalMeals = data.stats.fullMeals + data.stats.halfMeals
+        const estimatedCapacity = 100 // Adjust based on your canteen capacity
+        const foodUtilization = totalMeals > 0 ? Math.min(Math.round((totalMeals / estimatedCapacity) * 100), 100) : 0
+
+        setDashboardStats({
+          activeStudents,
+          todaysRevenue,
+          foodUtilization
+        })
       } catch (err) {
         console.error('Error:', err)
       } finally {
@@ -434,15 +460,21 @@ export default function LandingPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-lg">
                       <span>Active Students</span>
-                      <span className="font-bold">156</span>
+                      <span className="font-bold">
+                        {loading ? '...' : dashboardStats.activeStudents}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-lg">
                       <span>Today&apos;s Revenue</span>
-                      <span className="font-bold">₹12,450</span>
+                      <span className="font-bold">
+                        {loading ? '...' : `₹${dashboardStats.todaysRevenue.toLocaleString()}`}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-lg">
                       <span>Food Utilization</span>
-                      <span className="font-bold">87%</span>
+                      <span className="font-bold">
+                        {loading ? '...' : `${dashboardStats.foodUtilization}%`}
+                      </span>
                     </div>
                   </div>
                 </div>
