@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, X, Smartphone } from 'lucide-react';
-import jsQR from 'jsqr';
+import QrScanner from 'qr-scanner';
 
 export default function QRScanner({ onScan, onClose, enabled = true }) {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const scanningRef = useRef(false);
   const [error, setError] = useState('');
   const [isReady, setIsReady] = useState(false);
@@ -170,6 +169,13 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
     startStream();
 
     return () => {
+      // Stop QR scanner if it's running
+      if (scanningRef.current && typeof scanningRef.current === 'object' && scanningRef.current.stop) {
+        scanningRef.current.stop();
+        scanningRef.current.destroy();
+        console.log('🛑 QR Scanner stopped and destroyed');
+      }
+      
       scanningRef.current = false;
       const currentVideo = videoRef.current;
       if (stream) {
@@ -187,114 +193,105 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
   }, [enabled, selectedDeviceId, permissionStatus]);
 
   const startScanning = () => {
-    const canvas = canvasRef.current;
     const video = videoRef.current;
-    if (!canvas || !video) {
-      console.error('Canvas or video ref missing');
+    if (!video) {
+      console.error('Video ref missing');
       return;
     }
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     scanningRef.current = true;
-    
-    console.log('🔍 Starting QR code scanning...');
-    
-    let frameCount = 0;
-    
-    const scan = () => {
-      if (!scanningRef.current) return;
+    console.log('🔍 Starting QR code scanning with qr-scanner...');
 
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        // Set canvas size to match video
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+    // Create QR scanner instance
+    const qrScanner = new QrScanner(
+      video,
+      result => {
+        if (!scanningRef.current) return;
         
-        // Draw current video frame
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const codeData = result.data;
         
-        // Get image data
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
-        // Try multiple inversion attempts for better detection
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'attemptBoth', // Try both normal and inverted colors
-        });
-        
-        if (code && code.data) {
-          // Only process if it's different from last scanned code
-          if (code.data !== scannedCode) {
-            console.log('✅ QR Code detected:', code.data);
-            setDebugInfo(`Found: ${code.data.substring(0, 50)}... Processing...`);
+        // Only process if it's different from last scanned code
+        if (codeData !== scannedCode) {
+          console.log('✅ QR Code detected:', codeData);
+          setDebugInfo(`Found: ${codeData.substring(0, 50)}... Processing...`);
+          
+          // Validate the QR code format
+          try {
+            const qrData = JSON.parse(codeData);
+            console.log('📋 Parsed QR data:', qrData);
             
-            // Validate the QR code format
-            try {
-              const qrData = JSON.parse(code.data);
-              console.log('📋 Parsed QR data:', qrData);
+            if (qrData.userId && qrData.type === 'attendance') {
+              console.log('✅ Valid attendance QR code! Submitting...');
+              setDebugInfo(`✅ Valid QR! Submitting attendance...`);
+              setScannedCode(codeData);
+              scanningRef.current = false;
               
-              if (qrData.userId && qrData.type === 'attendance') {
-                console.log('✅ Valid attendance QR code! Submitting...');
-                setDebugInfo(`✅ Valid QR! Submitting attendance...`);
-                setScannedCode(code.data);
-                scanningRef.current = false;
-                
-                // Vibrate on success (mobile only)
-                if (navigator.vibrate) {
-                  navigator.vibrate(200);
-                }
-                
-                // Flash success indicator
-                const successFlash = document.createElement('div');
-                successFlash.style.cssText = 'position:fixed;inset:0;background:rgba(34,197,94,0.3);pointer-events:none;z-index:9999;';
-                document.body.appendChild(successFlash);
-                setTimeout(() => successFlash.remove(), 200);
-                
-                // Call onScan with the data
-                onScan(code.data);
-                return;
-              } else {
-                // Invalid format, continue scanning
-                frameCount++;
-                const missing = [];
-                if (!qrData.userId) missing.push('userId');
-                if (!qrData.type) missing.push('type');
-                else if (qrData.type !== 'attendance') missing.push(`type="${qrData.type}" (need "attendance")`);
-                
-                setDebugInfo(`❌ Invalid: Missing ${missing.join(', ')}`);
-                
-                console.log('⚠️ QR code found but invalid format. Missing:', missing, 'Data:', qrData);
+              // Stop the scanner
+              qrScanner.stop();
+              
+              // Vibrate on success (mobile only)
+              if (navigator.vibrate) {
+                navigator.vibrate(200);
               }
-            } catch (e) {
-              // Not a valid JSON, might be a different QR code
-              frameCount++;
-              setDebugInfo(`❌ Not JSON: ${code.data.substring(0, 30)}...`);
               
-              console.log('⚠️ QR code found but not JSON:', code.data.substring(0, 100), 'Error:', e.message);
+              // Flash success indicator
+              const successFlash = document.createElement('div');
+              successFlash.style.cssText = 'position:fixed;inset:0;background:rgba(34,197,94,0.3);pointer-events:none;z-index:9999;';
+              document.body.appendChild(successFlash);
+              setTimeout(() => successFlash.remove(), 200);
               
-              // Try to use it anyway if it looks like it might be valid
-              if (code.data.includes('userId') && code.data.includes('attendance')) {
-                console.log('🔧 Attempting to use malformed JSON...');
-                setDebugInfo(`⚡ Trying malformed data...`);
-                onScan(code.data);
-                setScannedCode(code.data);
-                scanningRef.current = false;
-                return;
-              }
+              // Call onScan with the data
+              onScan(codeData);
+              return;
+            } else {
+              // Invalid format, continue scanning
+              const missing = [];
+              if (!qrData.userId) missing.push('userId');
+              if (!qrData.type) missing.push('type');
+              else if (qrData.type !== 'attendance') missing.push(`type="${qrData.type}" (need "attendance")`);
+              
+              setDebugInfo(`❌ Invalid: Missing ${missing.join(', ')}`);
+              console.log('⚠️ QR code found but invalid format. Missing:', missing, 'Data:', qrData);
+            }
+          } catch (e) {
+            // Not a valid JSON, might be a different QR code
+            setDebugInfo(`❌ Not JSON: ${codeData.substring(0, 30)}...`);
+            console.log('⚠️ QR code found but not JSON:', codeData.substring(0, 100), 'Error:', e.message);
+            
+            // Try to use it anyway if it looks like it might be valid
+            if (codeData.includes('userId') && codeData.includes('attendance')) {
+              console.log('🔧 Attempting to use malformed JSON...');
+              setDebugInfo(`⚡ Trying malformed data...`);
+              qrScanner.stop();
+              onScan(codeData);
+              setScannedCode(codeData);
+              scanningRef.current = false;
+              return;
             }
           }
-        } else {
-          // No code detected, continue scanning
-          frameCount++;
-          if (frameCount % 120 === 0) {
-            setDebugInfo(`Scanning... (${Math.floor(frameCount/30)}s)`);
-            console.log('🔍 Scanning... (frame ' + frameCount + ')');
-          }
         }
+      },
+      {
+        // qr-scanner options
+        returnDetailedScanResult: true,
+        highlightScanRegion: false,
+        highlightCodeOutline: false,
+        maxScansPerSecond: 5, // Scan 5 times per second (good balance of speed and CPU usage)
+        preferredCamera: 'environment', // Use back camera
       }
-      
-      requestAnimationFrame(scan);
-    };
+    );
 
-    requestAnimationFrame(scan);
+    // Start scanning
+    qrScanner.start().then(() => {
+      console.log('✅ QR Scanner started successfully');
+      setDebugInfo('Scanning...');
+    }).catch(err => {
+      console.error('❌ Failed to start scanner:', err);
+      setError('Failed to start QR scanner: ' + err.message);
+    });
+
+    // Cleanup function stored in ref
+    scanningRef.current = qrScanner;
   };
 
   const handleManualInput = (text) => {
@@ -375,7 +372,6 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
               muted
               className="w-full h-full object-cover"
             />
-            <canvas ref={canvasRef} className="hidden" />
             
             {/* Scanning overlay */}
             {isReady && (
