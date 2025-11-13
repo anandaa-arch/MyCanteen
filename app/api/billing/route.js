@@ -382,12 +382,61 @@ async function getAllBills(supabase, month, year) {
       profilesMap[p.id] = p;
     });
 
-    const billsWithProfiles = bills.map(bill => ({
-      ...bill,
-      user_profile: profilesMap[bill.user_id] || null
-    }));
+    // Calculate actual paid amounts from meal_payments table
+    const billsWithPayments = await Promise.all(
+      bills.map(async (bill) => {
+        // Get date range for this bill's month
+        const startDate = `${bill.year}-${bill.month.toString().padStart(2, '0')}-01`;
+        const endDate = new Date(bill.year, bill.month, 0).toISOString().split('T')[0];
 
-    return NextResponse.json({ bills: billsWithProfiles });
+        // Get all confirmed meals for this user in this month
+        const { data: confirmedMeals } = await supabase
+          .from('poll_responses')
+          .select('id, portion_size')
+          .eq('user_id', bill.user_id)
+          .eq('present', true)
+          .eq('confirmation_status', 'confirmed_attended')
+          .gte('date', startDate)
+          .lte('date', endDate);
+
+        if (!confirmedMeals || confirmedMeals.length === 0) {
+          return {
+            ...bill,
+            user_profile: profilesMap[bill.user_id] || null,
+            paid_amount: 0,
+            due_amount: bill.total_amount,
+            status: 'pending'
+          };
+        }
+
+        // Check which meals have been paid
+        const mealIds = confirmedMeals.map(m => m.id);
+        const { data: paidMeals } = await supabase
+          .from('meal_payments')
+          .select('poll_response_id, amount')
+          .in('poll_response_id', mealIds);
+
+        const paidAmount = paidMeals?.reduce((sum, payment) => sum + parseFloat(payment.amount), 0) || 0;
+        const dueAmount = Math.max(0, bill.total_amount - paidAmount);
+
+        let status = 'pending';
+        if (paidAmount >= bill.total_amount) {
+          status = 'paid';
+        } else if (paidAmount > 0) {
+          status = 'partial';
+        }
+
+        return {
+          ...bill,
+          user_profile: profilesMap[bill.user_id] || null,
+          paid_amount: paidAmount,
+          due_amount: dueAmount,
+          status: status
+        };
+      })
+    );
+
+    return NextResponse.json({ bills: billsWithPayments });
   }
 
   return NextResponse.json({ bills: [] });
