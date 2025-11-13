@@ -127,7 +127,7 @@ export async function POST(request) {
         return await generateMonthlyBills(supabaseAdmin, month, year);
       
       case 'record-payment':
-        return await recordPayment(supabaseAdmin, userId, month, year, amount, paymentMethod, notes, profile.full_name);
+        return await recordPayment(supabaseAdmin, userId, month, year, amount, paymentMethod, notes, user.id);
       
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -450,7 +450,7 @@ async function getUserBills(supabase, userId) {
 }
 
 async function recordPayment(supabase, userId, month, year, amount, paymentMethod, notes, recordedBy) {
-  // First get the bill
+  // First get the bill (for legacy compatibility)
   const { data: bill, error: billError } = await supabase
     .from('monthly_bills')
     .select('*')
@@ -463,7 +463,7 @@ async function recordPayment(supabase, userId, month, year, amount, paymentMetho
     return NextResponse.json({ error: 'Bill not found' }, { status: 404 });
   }
 
-  // Record the payment
+  // Record the payment in payment_records (legacy)
   const { data: payment, error: paymentError } = await supabase
     .from('payment_records')
     .insert({
@@ -480,6 +480,68 @@ async function recordPayment(supabase, userId, month, year, amount, paymentMetho
   if (paymentError) {
     console.error('Payment recording error:', paymentError);
     return NextResponse.json({ error: 'Failed to record payment' }, { status: 500 });
+  }
+
+  // NEW: Also record in meal_payments table for individual meal tracking
+  // Get unpaid meals for this user in this month
+  const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+  const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+  
+  const { data: unpaidMeals, error: mealsError } = await supabase
+    .from('poll_responses')
+    .select('id, portion_size, date')
+    .eq('user_id', userId)
+    .eq('present', true)
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: true });
+
+  if (!mealsError && unpaidMeals && unpaidMeals.length > 0) {
+    // Check which meals are already paid
+    const { data: existingPayments } = await supabase
+      .from('meal_payments')
+      .select('poll_response_id')
+      .in('poll_response_id', unpaidMeals.map(m => m.id));
+    
+    const paidMealIds = new Set(existingPayments?.map(p => p.poll_response_id) || []);
+    
+    // Filter to only unpaid meals
+    const mealsToPayFor = unpaidMeals.filter(m => !paidMealIds.has(m.id));
+    
+    // Calculate how many meals we can pay for with this amount
+    let remainingAmount = parseFloat(amount);
+    const mealPayments = [];
+    
+    for (const meal of mealsToPayFor) {
+      const mealCost = meal.portion_size === 'full' ? 60 : 45;
+      
+      if (remainingAmount >= mealCost) {
+        mealPayments.push({
+          poll_response_id: meal.id,
+          user_id: userId,
+          amount: mealCost,
+          payment_date: new Date().toISOString(),
+          payment_method: paymentMethod || 'cash',
+          recorded_by: recordedBy,
+          notes: notes || `Payment for ${meal.portion_size} meal on ${meal.date}`
+        });
+        remainingAmount -= mealCost;
+      }
+      
+      if (remainingAmount < 45) break; // Can't pay for any more meals
+    }
+    
+    // Insert meal payments
+    if (mealPayments.length > 0) {
+      const { error: mealPaymentError } = await supabase
+        .from('meal_payments')
+        .insert(mealPayments);
+      
+      if (mealPaymentError) {
+        console.error('Meal payment recording error:', mealPaymentError);
+        // Don't fail the whole operation, just log it
+      }
+    }
   }
 
   return NextResponse.json({ 
