@@ -84,11 +84,34 @@ function AdminDashboardContent() {
         console.error('Fetch error:', error.message);
         setUsers([]);
       } else {
+        // Calculate total bill for each user from confirmed meals
+        const usersWithBills = await Promise.all(
+          (data || []).map(async (user) => {
+            // Get all confirmed meals for this user
+            const { data: confirmedMeals } = await supabase
+              .from('poll_responses')
+              .select('portion_size')
+              .eq('user_id', user.id)
+              .eq('present', true)
+              .eq('confirmation_status', 'confirmed_attended');
+
+            // Calculate total bill
+            const totalBill = (confirmedMeals || []).reduce((sum, meal) => {
+              return sum + (meal.portion_size === 'full' ? 60 : 45);
+            }, 0);
+
+            return {
+              ...user,
+              total_bill: totalBill
+            };
+          })
+        );
+
         // Cache full user list only (not search results)
         if (!searchQuery.trim()) {
-          setInCache('admin_users_list', data || [], 600); // Cache for 10 minutes
+          setInCache('admin_users_list', usersWithBills, 600); // Cache for 10 minutes
         }
-        setUsers(data || []);
+        setUsers(usersWithBills);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
