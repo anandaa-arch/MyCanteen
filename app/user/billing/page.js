@@ -73,12 +73,13 @@ function UserBillingPageContent() {
         return;
       }
 
-      // Fetch all confirmed meals (poll_responses where present = true or confirmed_attended)
+      // Fetch only admin-confirmed meals (must be confirmed_attended by admin)
       const { data: pollResponses, error } = await supabase
         .from('poll_responses')
         .select('*')
         .eq('user_id', userId)
         .eq('present', true)
+        .eq('confirmation_status', 'confirmed_attended')
         .order('date', { ascending: false });
 
       if (error) {

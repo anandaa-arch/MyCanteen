@@ -483,7 +483,7 @@ async function recordPayment(supabase, userId, month, year, amount, paymentMetho
   }
 
   // NEW: Also record in meal_payments table for individual meal tracking
-  // Get unpaid meals for this user in this month
+  // Get only admin-confirmed unpaid meals for this user in this month
   const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
   const endDate = new Date(year, month, 0).toISOString().split('T')[0];
   
@@ -492,6 +492,7 @@ async function recordPayment(supabase, userId, month, year, amount, paymentMetho
     .select('id, portion_size, date')
     .eq('user_id', userId)
     .eq('present', true)
+    .eq('confirmation_status', 'confirmed_attended')
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date', { ascending: true });
