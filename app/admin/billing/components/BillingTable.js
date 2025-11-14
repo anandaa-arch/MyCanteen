@@ -11,7 +11,8 @@ const BillingTable = ({
   filteredBills, 
   loading, 
   getStatusBadge,
-  onAddPayment 
+  onAddPayment,
+  onViewMeals
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -138,15 +139,24 @@ const BillingTable = ({
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      {bill.status !== 'paid' && (
+                      <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => onAddPayment(bill)}
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors duration-200"
+                          onClick={() => onViewMeals && onViewMeals(bill)}
+                          className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200"
                         >
-                          <Plus className="w-4 h-4" />
-                          Add Payment
+                          <Receipt className="w-4 h-4" />
+                          View Meals
                         </button>
-                      )}
+                        {bill.status !== 'paid' && (
+                          <button
+                            onClick={() => onAddPayment(bill)}
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors duration-200"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Payment
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

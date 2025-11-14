@@ -51,7 +51,7 @@ const PaymentModal = ({
             {/* Bill Information */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="text-sm font-medium text-gray-700 mb-2">
-                User: {selectedBill.profiles_new?.full_name}
+                User: {selectedBill.user_profile?.full_name || selectedBill.profiles_new?.full_name || 'Unknown User'}
               </div>
               <div className="text-sm text-gray-600 space-y-1">
                 <div>Bill: {months.find(m => m.value === selectedBill.month)?.label} {selectedBill.year}</div>

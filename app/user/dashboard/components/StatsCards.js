@@ -25,6 +25,12 @@ const getConfirmationBadge = (status) => {
   )
 }
 
+const mealSlots = [
+  { key: 'breakfast', label: 'Breakfast' },
+  { key: 'lunch', label: 'Lunch' },
+  { key: 'dinner', label: 'Dinner' }
+]
+
 export default function StatsCards({ userStats }) {
   // Get current month and year for display
   const now = new Date()
@@ -61,14 +67,26 @@ export default function StatsCards({ userStats }) {
       {/* Today's Status Card */}
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow">
         <h3 className="text-base sm:text-lg font-semibold text-gray-900">Today&apos;s Status</h3>
-        <div className="mt-2">
-          {userStats.todaysPollResponse ? (
-            <div>
-              <p className="text-base sm:text-lg font-bold text-blue-600 mb-2">
-                {userStats.todaysPollResponse.present ? 'Attending' : 'Not Attending'}
-              </p>
-              {getConfirmationBadge(userStats.confirmationStatus)}
-            </div>
+        <div className="mt-3 space-y-3">
+          {userStats.todaysPollResponses?.length ? (
+            mealSlots.map(({ key, label }) => {
+              const response = userStats.todaysPollResponses?.find((resp) => resp.meal_slot === key)
+              return (
+                <div key={key} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{label}</p>
+                    <p className="text-sm text-gray-600">
+                      {response ? (
+                        response.present
+                          ? `Attending • ${response.portion_size} portion`
+                          : 'Not attending'
+                      ) : 'No response yet'}
+                    </p>
+                  </div>
+                  {response && getConfirmationBadge(response.confirmation_status)}
+                </div>
+              )
+            })
           ) : (
             <p className="text-base sm:text-lg font-bold text-yellow-600">No response yet</p>
           )}

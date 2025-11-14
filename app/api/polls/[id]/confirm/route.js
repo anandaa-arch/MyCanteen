@@ -67,16 +67,41 @@ export async function PUT(request, { params }) {
 
     const newStatus = statusMap[action];
 
+    // Get existing response so we can backfill timestamps when missing
+    const { data: existingResponse, error: existingError } = await supabase
+      .from('poll_responses')
+      .select('id, attended_at, actual_meal_time')
+      .eq('id', id)
+      .single();
+
+    if (existingError || !existingResponse) {
+      return NextResponse.json(
+        { error: 'Poll response not found' },
+        { status: 404 }
+      );
+    }
+
+    const timestamp = new Date().toISOString();
+    const updatePayload = {
+      confirmation_status: newStatus,
+      confirmed_by: user.id,
+      confirmed_at: timestamp,
+      admin_notes: admin_notes || null,
+      updated_at: timestamp
+    };
+
+    if (action === 'confirm_attended' && !existingResponse.attended_at) {
+      updatePayload.attended_at = timestamp;
+    }
+
+    if (action === 'confirm_attended' && !existingResponse.actual_meal_time) {
+      updatePayload.actual_meal_time = timestamp;
+    }
+
     // 4. Update the poll response
     const { data, error } = await supabase
       .from('poll_responses')
-      .update({
-        confirmation_status: newStatus,
-        confirmed_by: user.id,
-        confirmed_at: new Date().toISOString(),
-        admin_notes: admin_notes || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single();

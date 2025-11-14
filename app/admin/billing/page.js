@@ -9,6 +9,7 @@ import BillingStatsCards from './components/BillingStatsCards';
 import BillingControls from './components/BillingControls';
 import BillingTable from './components/BillingTable';
 import PaymentModal from './components/PaymentModal';
+import MealDetailsModal from './components/MealDetailsModal';
 import { BillingErrorBoundary } from '@/components/PageErrorBoundary';
 import { FullPageLoader } from '@/components/LoadingSpinner';
 import { BillingSkeleton } from '@/components/Skeleton';
@@ -35,6 +36,11 @@ function AdminBillingPageContent() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [mealDetails, setMealDetails] = useState([]);
+  const [mealDetailsLoading, setMealDetailsLoading] = useState(false);
+  const [mealDetailsError, setMealDetailsError] = useState('');
+  const [showMealDetails, setShowMealDetails] = useState(false);
+  const [selectedMealBill, setSelectedMealBill] = useState(null);
 
   const months = [
     { value: 1, label: 'January' },
@@ -109,6 +115,34 @@ function AdminBillingPageContent() {
     }
   };
 
+  const fetchMealDetails = async (bill) => {
+    if (!bill) return;
+
+    try {
+      setMealDetailsLoading(true);
+      setMealDetailsError('');
+      const response = await fetch(
+        `/api/billing?action=get-meal-details&userId=${bill.user_id}&month=${bill.month}&year=${bill.year}`
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        setMealDetailsError(error.error || 'Failed to fetch meal details');
+        setMealDetails([]);
+        return;
+      }
+
+      const data = await response.json();
+      setMealDetails(data.meals || []);
+    } catch (error) {
+      console.error('Error fetching meal details:', error);
+      setMealDetailsError('Failed to fetch meal details');
+      setMealDetails([]);
+    } finally {
+      setMealDetailsLoading(false);
+    }
+  };
+
   const generateBills = async () => {
     try {
       setIsGenerating(true);
@@ -138,6 +172,20 @@ function AdminBillingPageContent() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleViewMeals = (bill) => {
+    setSelectedMealBill(bill);
+    setShowMealDetails(true);
+    setMealDetails([]);
+    fetchMealDetails(bill);
+  };
+
+  const handleCloseMealDetails = () => {
+    setShowMealDetails(false);
+    setSelectedMealBill(null);
+    setMealDetails([]);
+    setMealDetailsError('');
   };
 
   const recordPayment = async () => {
@@ -266,6 +314,7 @@ function AdminBillingPageContent() {
           loading={loading}
           getStatusBadge={getStatusBadge}
           onAddPayment={handleAddPayment}
+          onViewMeals={handleViewMeals}
         />
       </div>
 
@@ -281,6 +330,15 @@ function AdminBillingPageContent() {
         onRecordPayment={recordPayment}
         onClose={handleClosePaymentModal}
         months={months}
+      />
+
+      <MealDetailsModal
+        showModal={showMealDetails}
+        bill={selectedMealBill}
+        meals={mealDetails}
+        loading={mealDetailsLoading}
+        error={mealDetailsError}
+        onClose={handleCloseMealDetails}
       />
     </div>
   );

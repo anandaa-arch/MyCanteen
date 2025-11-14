@@ -17,6 +17,29 @@ import { DashboardSkeleton } from '@/components/Skeleton'
 import { useNotifications } from '@/lib/notificationSystem'
 import { usePaymentNotifications, usePollNotifications } from '@/lib/notificationSystem'
 
+// Helper function to get current meal slot based on time
+const getCurrentMealSlot = () => {
+  const now = new Date();
+  const hours = now.getHours();
+  
+  // Breakfast booking: 5:00 AM - 9:00 AM
+  if (hours >= 5 && hours < 9) {
+    return 'breakfast';
+  }
+  // Lunch booking: 9:00 AM - 2:00 PM (14:00)
+  else if (hours >= 9 && hours < 14) {
+    return 'lunch';
+  }
+  // Dinner booking: 2:00 PM - 10:00 PM (22:00)
+  else if (hours >= 14 && hours < 22) {
+    return 'dinner';
+  }
+  // After 10 PM, default to next day's breakfast
+  else {
+    return 'breakfast';
+  }
+};
+
 function UserDashboardContent() {
   const router = useRouter()
   const supabase = useSupabaseClient()
@@ -28,16 +51,47 @@ function UserDashboardContent() {
   const [pollOpen, setPollOpen] = useState(false)
   const [attendance, setAttendance] = useState('yes')
   const [mealType, setMealType] = useState('full')
+  const [mealSlot, setMealSlot] = useState(getCurrentMealSlot()) // Auto-select based on current time
   const [pollLoading, setPollLoading] = useState(false)
   const [pollMessage, setPollMessage] = useState('')
+
+  const getResponseForSlot = (slot, responses = []) => {
+    if (!responses?.length) return null;
+    return responses.find((resp) => resp.meal_slot === slot) || null;
+  };
+
+  const syncFormWithSlot = (slot, responses = []) => {
+    const match = getResponseForSlot(slot, responses);
+    if (match) {
+      setAttendance(match.present ? 'yes' : 'no');
+      setMealType(match.portion_size);
+    } else {
+      setAttendance('yes');
+      setMealType('full');
+    }
+  };
+
+  const normalizeStats = (stats) => {
+    if (!stats) return stats;
+    if (Array.isArray(stats.todaysPollResponses)) return stats;
+
+    const fallbackResponses = stats.todaysPollResponse
+      ? [stats.todaysPollResponse]
+      : [];
+
+    const { todaysPollResponse, confirmationStatus, ...rest } = stats;
+    return {
+      ...rest,
+      todaysPollResponses: fallbackResponses
+    };
+  };
 
   // User stats
   const [userStats, setUserStats] = useState({
     totalBill: 0,
     thisMonthMeals: 0,
     allTimeMeals: 0,
-    todaysPollResponse: null,
-    confirmationStatus: null
+    todaysPollResponses: []
   })
 
   useEffect(() => {
@@ -104,6 +158,10 @@ function UserDashboardContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
+  useEffect(() => {
+    syncFormWithSlot(mealSlot, userStats.todaysPollResponses)
+  }, [mealSlot, userStats.todaysPollResponses])
+
 const checkAuthAndLoadData = async () => {
   try {
     setLoading(true);
@@ -157,12 +215,9 @@ const checkAuthAndLoadData = async () => {
       const cachedStats = getFromCache(cacheKey);
       
       if (cachedStats) {
-        setUserStats(cachedStats);
-        // Also set form values if poll response exists
-        if (cachedStats.todaysPollResponse) {
-          setAttendance(cachedStats.todaysPollResponse.present ? 'yes' : 'no');
-          setMealType(cachedStats.todaysPollResponse.portion_size);
-        }
+        const normalized = normalizeStats(cachedStats)
+        setUserStats(normalized);
+        syncFormWithSlot(mealSlot, normalized.todaysPollResponses);
         return;
       }
 
@@ -196,45 +251,38 @@ const checkAuthAndLoadData = async () => {
                responseDate.getFullYear() === currentYear
       }).length || 0
 
-      // Today's poll response
+      // Today's poll responses (all meal slots)
       const today = new Date().toISOString().slice(0, 10)
-      let todaysPoll = null;
-      
+      let todaysPolls = []
+
       try {
         const { data, error: pollError } = await supabase
           .from('poll_responses')
           .select('*')
           .eq('user_id', userId)
           .eq('date', today)
-          .single()
+          .order('meal_slot', { ascending: true })
         
-        if (!pollError) {
-          todaysPoll = data;
-        } else if (!pollError.message?.includes('poll_responses')) {
-          // Log error only if it's not about missing table
-          console.warn('Poll fetch warning:', pollError);
+        if (!pollError && data) {
+          todaysPolls = data
+        } else if (pollError && !pollError.message?.includes('poll_responses')) {
+          console.warn('Poll fetch warning:', pollError)
         }
       } catch (pollErr) {
-        console.warn('Could not fetch poll response:', pollErr);
+        console.warn('Could not fetch poll responses:', pollErr)
       }
 
-      const stats = {
+      const stats = normalizeStats({
         totalBill: totalBill,
         thisMonthMeals: thisMonthMeals,
         allTimeMeals: allTimeMeals,
-        todaysPollResponse: todaysPoll,
-        confirmationStatus: todaysPoll?.confirmation_status || null
-      };
+        todaysPollResponses: todaysPolls
+      });
 
       // Cache the stats
       setInCache(cacheKey, stats, 300); // 5 minute TTL
       setUserStats(stats)
-
-      // Set form values if poll response exists
-      if (todaysPoll) {
-        setAttendance(todaysPoll.present ? 'yes' : 'no')
-        setMealType(todaysPoll.portion_size)
-      }
+      syncFormWithSlot(mealSlot, todaysPolls)
     } catch (err) {
       console.error('Error loading user stats:', err)
     }
@@ -257,23 +305,53 @@ const checkAuthAndLoadData = async () => {
         date: today,
         present: attendance === 'yes',
         portion_size: mealType,
+        meal_slot: mealSlot, // NEW: include meal slot
         confirmation_status: 'pending_customer_response'
       }
 
-      // Use upsert to handle both insert and update
+      // Use database function to handle upsert
+      console.log('Submitting poll with payload:', payload);
+      
       const { data: updatedData, error } = await supabase
-        .from('poll_responses')
-        .upsert(payload, { 
-          onConflict: 'user_id,date',
-          ignoreDuplicates: false 
+        .rpc('upsert_poll_response', {
+          p_user_id: payload.user_id,
+          p_date: payload.date,
+          p_present: payload.present,
+          p_portion_size: payload.portion_size,
+          p_meal_slot: payload.meal_slot,
+          p_confirmation_status: payload.confirmation_status
         })
-        .select()
+
+      console.log('Response data:', updatedData);
+      console.log('Response error:', error);
+
+      const existingResponse = getResponseForSlot(mealSlot, userStats.todaysPollResponses)
 
       if (error) {
-        setPollMessage(`Error: ${error.message}`)
+        const errorMsg = error.message || error.details || JSON.stringify(error);
+        setPollMessage(`Error: ${errorMsg}`)
         console.error('Poll update error:', error);
+        console.error('Error details:', errorMsg);
+        console.error('Payload:', payload);
+      } else if (!updatedData || updatedData.length === 0) {
+        console.warn('Warning: No data returned from upsert');
+        const isUpdate = !!existingResponse
+        setPollMessage(
+          attendance === 'no' 
+            ? '✅ Noted: You chose not to attend today.'
+            : `✅ ${isUpdate ? 'Updated' : 'Submitted'} your response for today's meal!`
+        )
+        
+        // Clear stats cache to force refresh
+        clearCache(`user_stats_${currentUser.id}`);
+        
+        // Reload user stats to get updated data
+        await loadUserStats(currentUser.id, currentUser.profile_id)
+        
+        // Close modal after 1.5 seconds
+        setTimeout(() => setPollOpen(false), 1500)
       } else {
-        const isUpdate = userStats.todaysPollResponse !== null
+        const isUpdate = !!existingResponse
         setPollMessage(
           attendance === 'no' 
             ? '✅ Noted: You chose not to attend today.'
@@ -304,7 +382,11 @@ const checkAuthAndLoadData = async () => {
     router.push('/login')
   }
 
-  const handleOpenPoll = () => {
+  const handleOpenPoll = (slot) => {
+    if (slot) {
+      setMealSlot(slot)
+      syncFormWithSlot(slot, userStats.todaysPollResponses)
+    }
     setPollOpen(true)
     setPollMessage('') // Clear any previous messages
   }
@@ -351,6 +433,8 @@ const checkAuthAndLoadData = async () => {
         setAttendance={setAttendance}
         mealType={mealType}
         setMealType={setMealType}
+        mealSlot={mealSlot}
+        setMealSlot={setMealSlot}
         pollLoading={pollLoading}
         pollMessage={pollMessage}
         onSubmitPoll={handleSubmitPoll}

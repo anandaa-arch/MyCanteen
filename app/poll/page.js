@@ -9,12 +9,50 @@ import { FormRadioGroup, FormSubmitButton, FormErrorSummary } from '@/components
 import { PollsErrorBoundary } from '@/components/PageErrorBoundary';
 import { PollSkeleton } from '@/components/Skeleton';
 
+const getCurrentMealSlot = () => {
+  const hours = new Date().getHours();
+  if (hours >= 5 && hours < 9) return 'breakfast';
+  if (hours >= 9 && hours < 14) return 'lunch';
+  if (hours >= 14 && hours < 22) return 'dinner';
+  return 'breakfast';
+};
+
+const mealSlotMeta = {
+  breakfast: {
+    icon: '🌅',
+    label: 'Breakfast',
+    booking: 'Book: 5-9 AM',
+    serving: 'Serving: 7:30-9 AM'
+  },
+  lunch: {
+    icon: '☀️',
+    label: 'Lunch',
+    booking: 'Book: 9 AM-2 PM',
+    serving: 'Serving: 12-2 PM'
+  },
+  dinner: {
+    icon: '🌙',
+    label: 'Dinner',
+    booking: 'Book: 2-10 PM',
+    serving: 'Serving: 7:30-10 PM'
+  }
+};
+
+const isMealSlotOpen = (slot) => {
+  const hours = new Date().getHours();
+  if (slot === 'breakfast') return hours >= 5 && hours < 9;
+  if (slot === 'lunch') return hours >= 9 && hours < 14;
+  if (slot === 'dinner') return hours >= 14 && hours < 22;
+  return false;
+};
+
 function PollPageContent() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [existingResponse, setExistingResponse] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [mealSlot, setMealSlot] = useState(getCurrentMealSlot());
 
   const supabase = useSupabaseClient();
 
@@ -59,6 +97,7 @@ function PollPageContent() {
       setExistingResponse(data);
       setValue('attendance', data.present ? 'yes' : 'no');
       setValue('portion', data.portion_size);
+      setMealSlot(data.meal_slot || getCurrentMealSlot());
       setMessage("You have already submitted your response for today. You can update it below.");
     }
   };
@@ -79,15 +118,19 @@ function PollPageContent() {
       date: today,
       present: formData.attendance === 'yes',
       portion_size: formData.portion,
+      meal_slot: mealSlot,
       confirmation_status: 'pending_customer_response'
     };
 
     try {
       const { data, error } = await supabase
-        .from('poll_responses')
-        .upsert(pollData, { 
-          onConflict: 'user_id,date',
-          ignoreDuplicates: false 
+        .rpc('upsert_poll_response', {
+          p_user_id: pollData.user_id,
+          p_date: pollData.date,
+          p_present: pollData.present,
+          p_portion_size: pollData.portion_size,
+          p_meal_slot: pollData.meal_slot,
+          p_confirmation_status: pollData.confirmation_status
         });
 
       if (error) {
@@ -95,10 +138,10 @@ function PollPageContent() {
         setMessage("❌ Error submitting response. Please try again.");
       } else {
         const successMsg = existingResponse 
-          ? `✅ Response updated!\nAttendance: ${formData.attendance === 'yes' ? 'Present' : 'Absent'}, Portion: ${formData.portion} plate`
-          : `✅ Response submitted!\nAttendance: ${formData.attendance === 'yes' ? 'Present' : 'Absent'}, Portion: ${formData.portion} plate`;
+          ? `✅ Response updated!\n${mealSlotMeta[mealSlot].label}: ${formData.attendance === 'yes' ? 'Present' : 'Absent'}, Portion: ${formData.portion} plate`
+          : `✅ Response submitted!\n${mealSlotMeta[mealSlot].label}: ${formData.attendance === 'yes' ? 'Present' : 'Absent'}, Portion: ${formData.portion} plate`;
         setMessage(successMsg);
-        setExistingResponse(pollData); // Update local state
+        setExistingResponse({ ...pollData }); // Update local state
         
         // Refresh the page data after a short delay
         setTimeout(() => {
@@ -138,6 +181,41 @@ function PollPageContent() {
       <FormErrorSummary errors={errors} />
 
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-md space-y-6 mt-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <p className="text-base font-medium text-gray-800 mb-3">Which meal?</p>
+          <div className="grid grid-cols-3 gap-3">
+            {Object.keys(mealSlotMeta).map((slot) => {
+              const meta = mealSlotMeta[slot];
+              const isOpen = isMealSlotOpen(slot);
+              const isSelected = mealSlot === slot;
+              return (
+                <button
+                  type="button"
+                  key={slot}
+                  onClick={() => isOpen && setMealSlot(slot)}
+                  disabled={!isOpen}
+                  className={`flex flex-col items-center gap-1.5 border-2 rounded-lg px-3 py-3 transition text-sm ${
+                    isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+                  } ${isOpen ? 'cursor-pointer hover:border-blue-300 hover:bg-blue-50' : 'cursor-not-allowed opacity-50'}`}
+                >
+                  <span className="text-2xl">{meta.icon}</span>
+                  <span className="font-semibold">{meta.label}</span>
+                  <span className="text-xs text-gray-600">{meta.booking}</span>
+                  <span className="text-[11px] italic text-gray-500">{meta.serving}</span>
+                  <span className={`text-xs font-semibold ${isOpen ? 'text-green-600' : 'text-red-500'}`}>
+                    {isOpen ? 'Open' : 'Closed'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {!isMealSlotOpen(mealSlot) && (
+            <p className="text-xs text-red-600 font-medium mt-2">
+              Selected slot is closed. Please wait for it to open or choose another slot.
+            </p>
+          )}
+        </div>
+
         <FormRadioGroup
           label="Will you attend?"
           options={[

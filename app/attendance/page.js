@@ -158,6 +158,7 @@ function AttendancePageContent() {
                   <tr className="bg-gray-50 border-b">
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Poll</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Slot</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Time</th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Details</th>
@@ -166,7 +167,22 @@ function AttendancePageContent() {
                 <tbody>
                   {attendanceHistory.map((record, idx) => {
                     const pollDate = new Date(record.date || record.created_at);
-                    const attendedTime = new Date(record.attended_at);
+                    const slotLabel = record.meal_slot
+                      ? record.meal_slot.charAt(0).toUpperCase() + record.meal_slot.slice(1)
+                      : '—';
+                    const timeSource = record.attended_at || record.actual_meal_time || record.confirmed_at || record.updated_at;
+                    const timeLabel = timeSource
+                      ? new Date(timeSource).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : null;
+                    const timeHint = record.attended_at
+                      ? 'QR check-in time'
+                      : record.actual_meal_time
+                      ? 'Recorded meal time'
+                      : record.confirmed_at
+                      ? 'Admin confirmation time'
+                      : record.updated_at
+                      ? 'Last updated time'
+                      : '';
                     
                     return (
                       <tr key={record.id} className={`border-b ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
@@ -179,6 +195,9 @@ function AttendancePageContent() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
                           {record.portion_size ? `${record.portion_size.charAt(0).toUpperCase() + record.portion_size.slice(1)} Plate` : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {slotLabel}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -196,13 +215,10 @@ function AttendancePageContent() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {record.attended_at ? (
-                            <div className="flex items-center gap-2">
+                          {timeLabel ? (
+                            <div className="flex items-center gap-2" title={timeHint || undefined}>
                               <Clock size={16} className="text-gray-400" />
-                              {attendedTime.toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                              {timeLabel}
                             </div>
                           ) : (
                             '-'

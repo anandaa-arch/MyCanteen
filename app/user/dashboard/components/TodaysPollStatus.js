@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Clock, Check, X, AlertCircle } from 'lucide-react';
 
 const getStatusBadge = (status) => {
@@ -13,7 +12,7 @@ const getStatusBadge = (status) => {
     cancelled: { color: 'bg-gray-100 text-gray-800', icon: X, label: '📵 Cancelled' }
   };
 
-  const config = statusConfig[status] || statusConfig.pending_customer_response;
+  const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', icon: Clock, label: 'Not Submitted' };
   const Icon = config.icon;
 
   return (
@@ -24,162 +23,66 @@ const getStatusBadge = (status) => {
   );
 };
 
+const mealSlots = [
+  { key: 'breakfast', label: 'Breakfast', icon: '🌅', booking: 'Book: 5-9 AM', serving: 'Serving: 7:30-9 AM' },
+  { key: 'lunch', label: 'Lunch', icon: '☀️', booking: 'Book: 9 AM-2 PM', serving: 'Serving: 12-2 PM' },
+  { key: 'dinner', label: 'Dinner', icon: '🌙', booking: 'Book: 2-10 PM', serving: 'Serving: 7:30-10 PM' }
+];
+
 export default function TodaysPollStatus({ userStats, onUpdateResponse }) {
-  const [marking, setMarking] = useState(false);
-  const [cancellingRequest, setCancellingRequest] = useState(false);
-
-  if (!userStats.todaysPollResponse) {
-    return null;
-  }
-
-  const pollResponse = userStats.todaysPollResponse;
-  const status = pollResponse.confirmation_status || 'pending_customer_response';
-  const isAttended = pollResponse.attended_at;
-
-  const handleMarkAsAttended = async () => {
-    if (!pollResponse.id) {
-      alert('Poll response ID not found');
-      return;
-    }
-
-    setMarking(true);
-    try {
-      const response = await fetch(`/api/polls/${pollResponse.id}/mark-attended`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'mark_attended' })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to mark attendance');
-      }
-
-      // Refresh the data
-      onUpdateResponse();
-      alert('Marked as attending! Waiting for admin confirmation.');
-    } catch (error) {
-      console.error('Error marking attendance:', error);
-      alert(`Failed: ${error.message}`);
-    } finally {
-      setMarking(false);
-    }
-  };
-
-  const handleCancelResponse = async () => {
-    if (!pollResponse.id) {
-      alert('Poll response ID not found');
-      return;
-    }
-
-    if (!window.confirm('Are you sure you want to cancel your response?')) {
-      return;
-    }
-
-    setCancellingRequest(true);
-    try {
-      const response = await fetch(`/api/polls/${pollResponse.id}/mark-attended`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel' })
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to cancel response');
-      }
-
-      // Refresh the data
-      onUpdateResponse();
-      alert('Response cancelled successfully.');
-    } catch (error) {
-      console.error('Error cancelling response:', error);
-      alert(`Failed: ${error.message}`);
-    } finally {
-      setCancellingRequest(false);
-    }
-  };
-  if (!userStats.todaysPollResponse) {
-    return null
-  }
+  const responsesBySlot = (userStats.todaysPollResponses || []).reduce((acc, resp) => {
+    acc[resp.meal_slot] = resp;
+    return acc;
+  }, {});
 
   return (
     <div className="mb-8 bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Today&apos;s Poll Response</h3>
-          <p className="text-sm text-gray-600 mt-1">
-            {pollResponse.present ? 'Attending' : 'Not Attending'} • 
-            {pollResponse.present && ` ${pollResponse.portion_size} portion`}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {getStatusBadge(status)}
-        </div>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Today&apos;s Meal Slots</h3>
+        <p className="text-sm text-gray-600">Track your responses for breakfast, lunch, and dinner.</p>
       </div>
 
-      {/* Action Buttons Based on Status */}
-      <div className="mt-4 flex gap-3 flex-wrap">
-        {/* Show "Mark as Attended" button only if pending and they said yes */}
-        {status === 'pending_customer_response' && pollResponse.present && !isAttended && (
-          <button
-            onClick={handleMarkAsAttended}
-            disabled={marking}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 text-sm font-medium flex items-center gap-2"
-          >
-            <Check size={16} />
-            {marking ? 'Marking...' : 'Mark as Attending Now'}
-          </button>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {mealSlots.map((slot) => {
+          const response = responsesBySlot[slot.key];
+          const status = response ? (response.confirmation_status || 'pending_customer_response') : null;
 
-        {/* Show "Awaiting Confirmation" info message */}
-        {status === 'awaiting_admin_confirmation' && (
-          <div className="px-4 py-2 bg-yellow-100 border border-yellow-400 rounded-lg text-sm font-medium text-yellow-800">
-            ⏳ You marked as attending. Admin will confirm soon.
-          </div>
-        )}
+          return (
+            <div key={slot.key} className="border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl" aria-hidden>{slot.icon}</span>
+                  <div>
+                    <p className="text-base font-semibold text-gray-900">{slot.label}</p>
+                    <p className="text-xs text-gray-500">{slot.booking}</p>
+                    <p className="text-xs text-gray-500">{slot.serving}</p>
+                  </div>
+                </div>
+                {getStatusBadge(status)}
+              </div>
 
-        {/* Show "Confirmed" message */}
-        {status === 'confirmed_attended' && (
-          <div className="px-4 py-2 bg-green-100 border border-green-400 rounded-lg text-sm font-medium text-green-800">
-            ✅ Your attendance has been confirmed!
-          </div>
-        )}
+              <div className="text-sm text-gray-700 min-h-[48px]">
+                {response ? (
+                  <>
+                    <p>{response.present ? 'Attending' : 'Not attending'}</p>
+                    {response.present && (
+                      <p className="text-xs text-gray-600">Portion: {response.portion_size}</p>
+                    )}
+                  </>
+                ) : (
+                  <p>No response yet</p>
+                )}
+              </div>
 
-        {/* Show "No Show" message */}
-        {status === 'no_show' && (
-          <div className="px-4 py-2 bg-red-100 border border-red-400 rounded-lg text-sm font-medium text-red-800">
-            ❌ Marked as no show - you didn&apos;t attend.
-          </div>
-        )}
-
-        {/* Show "Rejected" message */}
-        {status === 'rejected' && (
-          <div className="px-4 py-2 bg-orange-100 border border-orange-400 rounded-lg text-sm font-medium text-orange-800">
-            🚫 Your response was rejected by admin.
-          </div>
-        )}
-
-        {/* Always show "Update Response" button */}
-        <button
-          onClick={onUpdateResponse}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
-        >
-          Update Response
-        </button>
-
-        {/* Show "Cancel" button if not yet confirmed */}
-        {status !== 'confirmed_attended' && status !== 'cancelled' && (
-          <button
-            onClick={handleCancelResponse}
-            disabled={cancellingRequest}
-            className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition disabled:opacity-50 text-sm font-medium"
-          >
-            {cancellingRequest ? 'Cancelling...' : 'Cancel Response'}
-          </button>
-        )}
+              <button
+                onClick={() => onUpdateResponse(slot.key)}
+                className="w-full px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+              >
+                {response ? 'Update Response' : 'Submit Response'}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

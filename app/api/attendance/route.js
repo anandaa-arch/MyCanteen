@@ -229,9 +229,13 @@ export async function GET(request) {
           present,
           confirmation_status,
           attended_at,
+          actual_meal_time,
+          confirmed_at,
+          updated_at,
           created_at,
           date,
-          portion_size
+          portion_size,
+          meal_slot
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });

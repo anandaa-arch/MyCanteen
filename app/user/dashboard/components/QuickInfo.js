@@ -1,12 +1,19 @@
 export default function QuickInfo({ userStats }) {
   const getStatusMessage = () => {
-    if (userStats.confirmationStatus === 'pending') {
-      return 'Your response is pending admin confirmation'
+    const responses = userStats.todaysPollResponses || []
+    if (!responses.length) {
+      return 'Submit your response to participate in today\'s meals'
     }
-    if (userStats.confirmationStatus === 'confirmed') {
-      return 'Your response has been confirmed'
+
+    if (responses.some((resp) => resp.confirmation_status === 'confirmed_attended')) {
+      return 'At least one of your meals is confirmed for today'
     }
-    return 'Submit your response to participate in today\'s meal'
+
+    if (responses.some((resp) => resp.confirmation_status === 'awaiting_admin_confirmation')) {
+      return 'Waiting for admin confirmation for one or more meals'
+    }
+
+    return 'You can still update your responses until they are confirmed'
   }
 
   return (

@@ -69,6 +69,9 @@ export async function GET(request) {
       
       case 'get-user-bills':
         return await getUserBills(supabaseAdmin, userId);
+
+      case 'get-meal-details':
+        return await getMealDetails(supabaseAdmin, userId, month, year);
       
       case 'debug-poll-responses':
         // Debug action to see all poll responses for the month
@@ -115,7 +118,7 @@ export async function POST(request) {
     console.log('Action:', action);
 
     if (!profile || profile.role !== 'admin') {
-      console.log('❌ POST Admin check failed');
+      console.log(' POST Admin check failed');
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -399,28 +402,41 @@ async function getAllBills(supabase, month, year) {
           .gte('date', startDate)
           .lte('date', endDate);
 
-        if (!confirmedMeals || confirmedMeals.length === 0) {
-          return {
-            ...bill,
-            user_profile: profilesMap[bill.user_id] || null,
-            paid_amount: 0,
-            due_amount: bill.total_amount,
-            status: 'pending'
-          };
-        }
+        const computedBreakdown = (confirmedMeals || []).reduce(
+          (acc, meal) => {
+            if (meal.portion_size === 'half') {
+              acc.halfCount += 1;
+              acc.halfCost += MEAL_PRICES.half;
+            } else {
+              acc.fullCount += 1;
+              acc.fullCost += MEAL_PRICES.full;
+            }
+            return acc;
+          },
+          { halfCount: 0, fullCount: 0, halfCost: 0, fullCost: 0 }
+        );
+
+        const computedTotal = computedBreakdown.halfCost + computedBreakdown.fullCost;
+        const hasConfirmedMeals = (confirmedMeals?.length || 0) > 0;
 
         // Check which meals have been paid
-        const mealIds = confirmedMeals.map(m => m.id);
-        const { data: paidMeals } = await supabase
-          .from('meal_payments')
-          .select('poll_response_id, amount')
-          .in('poll_response_id', mealIds);
+        const mealIds = hasConfirmedMeals ? confirmedMeals.map(m => m.id) : [];
+        const { data: paidMeals } = mealIds.length
+          ? await supabase
+              .from('meal_payments')
+              .select('poll_response_id, amount')
+              .in('poll_response_id', mealIds)
+          : { data: [] };
 
         const paidAmount = paidMeals?.reduce((sum, payment) => sum + parseFloat(payment.amount), 0) || 0;
-        const dueAmount = Math.max(0, bill.total_amount - paidAmount);
+
+        const totalAmount = hasConfirmedMeals ? computedTotal : (bill.total_amount || 0);
+        const dueAmount = hasConfirmedMeals
+          ? Math.max(0, totalAmount - paidAmount)
+          : (bill.due_amount ?? Math.max(0, totalAmount - paidAmount));
 
         let status = 'pending';
-        if (paidAmount >= bill.total_amount) {
+        if (paidAmount >= totalAmount && totalAmount > 0) {
           status = 'paid';
         } else if (paidAmount > 0) {
           status = 'partial';
@@ -429,9 +445,14 @@ async function getAllBills(supabase, month, year) {
         return {
           ...bill,
           user_profile: profilesMap[bill.user_id] || null,
+          half_meal_count: hasConfirmedMeals ? computedBreakdown.halfCount : (bill.half_meal_count || 0),
+          full_meal_count: hasConfirmedMeals ? computedBreakdown.fullCount : (bill.full_meal_count || 0),
+          half_meal_cost: hasConfirmedMeals ? computedBreakdown.halfCost : (bill.half_meal_cost || 0),
+          full_meal_cost: hasConfirmedMeals ? computedBreakdown.fullCost : (bill.full_meal_cost || 0),
+          total_amount: totalAmount,
           paid_amount: paidAmount,
           due_amount: dueAmount,
-          status: status
+          status: hasConfirmedMeals ? status : (bill.status || status)
         };
       })
     );
@@ -496,6 +517,70 @@ async function getUserBills(supabase, userId) {
   }) || [];
 
   return NextResponse.json({ bills: processedBills });
+}
+
+async function getMealDetails(supabase, userId, month, year) {
+  if (!userId || !month || !year) {
+    return NextResponse.json({ error: 'userId, month, and year are required' }, { status: 400 });
+  }
+
+  const numericMonth = parseInt(month, 10);
+  const numericYear = parseInt(year, 10);
+
+  if (Number.isNaN(numericMonth) || Number.isNaN(numericYear)) {
+    return NextResponse.json({ error: 'Month and year must be numbers' }, { status: 400 });
+  }
+
+  const startDate = `${numericYear}-${numericMonth.toString().padStart(2, '0')}-01`;
+  const endDate = new Date(numericYear, numericMonth, 0).toISOString().split('T')[0];
+
+  const { data: meals, error } = await supabase
+    .from('poll_responses')
+    .select('id, date, meal_slot, portion_size, confirmation_status, attended_at, actual_meal_time, confirmed_at')
+    .eq('user_id', userId)
+    .eq('present', true)
+    .eq('confirmation_status', 'confirmed_attended')
+    .gte('date', startDate)
+    .lte('date', endDate)
+    .order('date', { ascending: false })
+    .order('meal_slot', { ascending: true });
+
+  if (error) {
+    console.error('Meal details fetch error:', error);
+    return NextResponse.json({ error: 'Failed to fetch meal details' }, { status: 500 });
+  }
+
+  const mealIds = meals?.map(meal => meal.id) || [];
+  const paymentsMap = {};
+
+  if (mealIds.length > 0) {
+    const { data: payments, error: paymentsError } = await supabase
+      .from('meal_payments')
+      .select('poll_response_id, amount, payment_date, payment_method, notes')
+      .in('poll_response_id', mealIds);
+
+    if (paymentsError) {
+      console.error('Meal payments fetch error:', paymentsError);
+    } else {
+      payments?.forEach(payment => {
+        paymentsMap[payment.poll_response_id] = payment;
+      });
+    }
+  }
+
+  const mealDetails = (meals || []).map(meal => {
+    const payment = paymentsMap[meal.id] || null;
+    const cost = meal.portion_size === 'full' ? MEAL_PRICES.full : MEAL_PRICES.half;
+
+    return {
+      ...meal,
+      cost,
+      isPaid: Boolean(payment),
+      payment
+    };
+  });
+
+  return NextResponse.json({ meals: mealDetails });
 }
 
 async function recordPayment(supabase, userId, month, year, amount, paymentMethod, notes, recordedBy) {
