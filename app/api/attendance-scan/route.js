@@ -1,4 +1,5 @@
 import { getSupabaseRouteClient } from '@/lib/supabaseRouteHandler';
+import { ensurePollForSlot, pollResponsesSupportsPollId } from '@/lib/pollHelpers';
 import { NextResponse } from 'next/server';
 
 // POST: Record attendance scan (alternative - creates poll if needed)
@@ -31,7 +32,7 @@ export async function POST(request) {
 
     // Parse request body
     const body = await request.json();
-    const { scannedData } = body;
+    const { scannedData, mealSlot } = body;
 
     if (!scannedData) {
       return NextResponse.json(
@@ -53,11 +54,26 @@ export async function POST(request) {
       );
     }
 
-    const { userId, type, timestamp, name, email } = qrPayload;
+    const { userId, type } = qrPayload;
 
     if (!userId || type !== 'attendance') {
       return NextResponse.json(
         { error: 'Invalid QR code: missing userId or invalid type' },
+        { status: 400 }
+      );
+    }
+
+    const slot = (mealSlot || qrPayload.mealSlot || qrPayload.slot || '').toLowerCase();
+    const validSlots = ['breakfast', 'lunch', 'dinner'];
+    if (!slot) {
+      return NextResponse.json(
+        { error: 'Meal slot is required. Please select breakfast, lunch, or dinner.' },
+        { status: 400 }
+      );
+    }
+    if (!validSlots.includes(slot)) {
+      return NextResponse.json(
+        { error: 'Invalid meal slot provided.' },
         { status: 400 }
       );
     }
@@ -78,76 +94,70 @@ export async function POST(request) {
 
     // Get or create today's poll
     const today = new Date().toISOString().split('T')[0];
-    
-    // Try to get today's poll
-    let { data: todaysPoll, error: pollError } = await supabase
-      .from('polls')
-      .select('id')
-      .eq('poll_date', today)
-      .single();
+    const { poll: todaysPoll, error: pollError } = await ensurePollForSlot(supabase, today, slot);
 
-    // If no poll exists, create one
-    if (pollError?.code === 'PGRST116') {
-      const { data: newPoll, error: createPollError } = await supabase
-        .from('polls')
-        .insert([
-          {
-            poll_date: today,
-            title: `Attendance - ${today}`,
-            status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ])
-        .select('id')
-        .single();
-
-      if (createPollError) {
-        console.error('Create poll error:', createPollError);
-        return NextResponse.json(
-          { error: 'Failed to create attendance poll' },
-          { status: 500 }
-        );
-      }
-
-      todaysPoll = newPoll;
-    } else if (pollError) {
-      console.error('Poll fetch error:', pollError);
+    if (pollError || !todaysPoll) {
+      console.error('Poll fetch/create error:', pollError);
       return NextResponse.json(
-        { error: 'Failed to fetch poll' },
+        { error: 'Failed to load attendance poll', details: pollError?.message },
         { status: 500 }
       );
     }
 
+    const pollIdSupport = await pollResponsesSupportsPollId(supabase);
+    if (pollIdSupport.error) {
+      console.warn('poll_id probe error:', pollIdSupport.error);
+    }
+    const canUsePollId = Boolean(todaysPoll.id) && pollIdSupport.supported;
+
     // Record the attendance
     const scanTimestamp = new Date().toISOString();
     
-    // Check for existing record
-    const { data: existingAttendance, error: existingError } = await supabase
+    let attendanceQuery = supabase
       .from('poll_responses')
-      .select('id, confirmation_status')
-      .eq('poll_id', todaysPoll.id)
-      .eq('user_id', userId)
-      .single();
+      .select('id, confirmation_status, actual_meal_time')
+      .eq('user_id', userId);
+
+    if (canUsePollId) {
+      attendanceQuery = attendanceQuery.eq('poll_id', todaysPoll.id);
+    } else {
+      attendanceQuery = attendanceQuery.eq('date', today).eq('meal_slot', slot);
+    }
+
+    const { data: existingAttendance, error: existingError } = await attendanceQuery.maybeSingle();
 
     let attendanceRecord;
     let isNewRecord = false;
 
-    if (existingError?.code === 'PGRST116') {
+    if (existingError && existingError.code !== 'PGRST116') {
+      console.error('Attendance query error:', existingError);
+      return NextResponse.json(
+        { error: 'Failed to check existing attendance' },
+        { status: 500 }
+      );
+    }
+
+    if (!existingAttendance) {
       // Create new record
+      const insertPayload = {
+        user_id: userId,
+        present: true,
+        confirmation_status: 'confirmed_attended',
+        attended_at: scanTimestamp,
+        meal_slot: slot,
+        actual_meal_time: scanTimestamp,
+        date: today,
+        created_at: scanTimestamp,
+        updated_at: scanTimestamp
+      };
+
+      if (canUsePollId) {
+        insertPayload.poll_id = todaysPoll.id;
+      }
+
       const { data: newRecord, error: createError } = await supabase
         .from('poll_responses')
-        .insert([
-          {
-            poll_id: todaysPoll.id,
-            user_id: userId,
-            present: true,
-            confirmation_status: 'confirmed_attended',
-            attended_at: scanTimestamp,
-            created_at: scanTimestamp,
-            updated_at: scanTimestamp
-          }
-        ])
+        .insert([insertPayload])
         .select()
         .single();
 
@@ -161,7 +171,7 @@ export async function POST(request) {
 
       attendanceRecord = newRecord;
       isNewRecord = true;
-    } else if (!existingError && existingAttendance) {
+    } else {
       // Update existing record
       const { data: updatedRecord, error: updateError } = await supabase
         .from('poll_responses')
@@ -169,6 +179,8 @@ export async function POST(request) {
           present: true,
           confirmation_status: 'confirmed_attended',
           attended_at: scanTimestamp,
+          actual_meal_time: existingAttendance.actual_meal_time || scanTimestamp,
+          meal_slot: slot,
           updated_at: scanTimestamp
         })
         .eq('id', existingAttendance.id)
@@ -185,12 +197,6 @@ export async function POST(request) {
 
       attendanceRecord = updatedRecord;
       isNewRecord = false;
-    } else {
-      console.error('Attendance query error:', existingError);
-      return NextResponse.json(
-        { error: 'Failed to check existing attendance' },
-        { status: 500 }
-      );
     }
 
     console.log(`✅ Attendance recorded for ${scannedUser.full_name} on ${today}`);
@@ -208,6 +214,7 @@ export async function POST(request) {
         date: today,
         status: attendanceRecord.confirmation_status,
         attendedAt: attendanceRecord.attended_at,
+        mealSlot: attendanceRecord.meal_slot || slot,
         isNewRecord
       }
     });

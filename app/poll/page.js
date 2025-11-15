@@ -113,13 +113,14 @@ function PollPageContent() {
     }
 
     const today = new Date().toISOString().slice(0, 10);
+    const isAttending = formData.attendance === 'yes';
     const pollData = {
       user_id: user.id,
       date: today,
-      present: formData.attendance === 'yes',
+      present: isAttending,
       portion_size: formData.portion,
       meal_slot: mealSlot,
-      confirmation_status: 'pending_customer_response'
+      confirmation_status: isAttending ? 'pending_customer_response' : 'cancelled'
     };
 
     try {

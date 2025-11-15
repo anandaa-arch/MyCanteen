@@ -2,34 +2,101 @@
 
 import { NextResponse } from 'next/server';
 import { generateInvoicePDF } from '@/utils/pdfGenerator';
-import { supabaseAdmin } from '@/lib/supabase';
+import { getSupabaseRouteClient } from '@/lib/supabaseRouteHandler';
 
 const MEAL_PRICES = {
   half: 45,
   full: 60
 };
 
+const normalizeDate = (value) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().split('T')[0];
+};
+
 export async function POST(request) {
   try {
+    const supabase = await getSupabaseRouteClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { userId, userName, startDate, endDate } = await request.json();
 
     // Validate input
-    if (!userId || !userName || !startDate || !endDate) {
+    const normalizedStart = normalizeDate(startDate);
+    const normalizedEnd = normalizeDate(endDate);
+
+    if (!userId || !normalizedStart || !normalizedEnd) {
       return NextResponse.json(
-        { error: 'Missing required parameters' },
+        { error: 'Missing or invalid parameters' },
         { status: 400 }
       );
     }
 
+    if (new Date(normalizedStart) > new Date(normalizedEnd)) {
+      return NextResponse.json(
+        { error: 'startDate must be before endDate' },
+        { status: 400 }
+      );
+    }
+
+    const { data: requesterProfile, error: requesterError } = await supabase
+      .from('profiles_new')
+      .select('id, role')
+      .eq('id', user.id)
+      .single();
+
+    if (requesterError || !requesterProfile) {
+      return NextResponse.json(
+        { error: 'Unable to load requester profile' },
+        { status: 403 }
+      );
+    }
+
+    const isAdmin = requesterProfile.role === 'admin';
+    const isSelfRequest = user.id === userId;
+
+    if (!isAdmin && !isSelfRequest) {
+      return NextResponse.json(
+        { error: 'Forbidden: insufficient privileges' },
+        { status: 403 }
+      );
+    }
+
+    const { data: targetProfile, error: targetError } = await supabase
+      .from('profiles_new')
+      .select('id, full_name, dept')
+      .eq('id', userId)
+      .single();
+
+    if (targetError || !targetProfile) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const invoiceUserName = targetProfile.full_name || userName || 'Account';
+    const invoiceDept = targetProfile.dept || 'N/A';
+
     // Fetch confirmed poll responses (meals) for the date range
-    const { data: pollResponses, error: mealsError } = await supabaseAdmin
+    const { data: pollResponses, error: mealsError } = await supabase
       .from('poll_responses')
       .select('id, date, portion_size, confirmation_status, present')
       .eq('user_id', userId)
       .eq('confirmation_status', 'confirmed_attended')
       .eq('present', true)
-      .gte('date', startDate)
-      .lte('date', endDate)
+      .gte('date', normalizedStart)
+      .lte('date', normalizedEnd)
       .order('date', { ascending: true });
 
     if (mealsError) {
@@ -77,13 +144,13 @@ export async function POST(request) {
       invoiceNumber: `INV-${Date.now()}`,
       date: new Date().toLocaleDateString('en-IN'),
       user: {
-        name: userName,
+        name: invoiceUserName,
         id: userId,
-        department: 'N/A',
+        department: invoiceDept,
       },
       dateRange: {
-        start: new Date(startDate).toLocaleDateString('en-IN'),
-        end: new Date(endDate).toLocaleDateString('en-IN')
+        start: new Date(normalizedStart).toLocaleDateString('en-IN'),
+        end: new Date(normalizedEnd).toLocaleDateString('en-IN')
       },
       meals: meals,
       totalAmount: totalAmount
@@ -101,7 +168,7 @@ export async function POST(request) {
     return new Response(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Invoice_${userName}_${startDate}_to_${endDate}.pdf"`,
+        'Content-Disposition': `attachment; filename="Invoice_${invoiceUserName}_${normalizedStart}_to_${normalizedEnd}.pdf"`,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Content-Length': pdfBuffer.length.toString(),
       },

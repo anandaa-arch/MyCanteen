@@ -184,6 +184,32 @@ function AttendancePageContent() {
                       ? 'Last updated time'
                       : '';
                     
+                    const statusDisplay = (() => {
+                      if (record.present === false) {
+                        return {
+                          label: '✗ Not attending',
+                          classes: 'bg-gray-100 text-gray-800'
+                        };
+                      }
+
+                      switch (record.confirmation_status) {
+                        case 'confirmed_attended':
+                          return { label: '✓ Present', classes: 'bg-green-100 text-green-800' };
+                        case 'awaiting_admin_confirmation':
+                          return { label: '⏳ Awaiting Confirmation', classes: 'bg-yellow-100 text-yellow-800' };
+                        case 'pending_customer_response':
+                          return { label: '✏️ Pending', classes: 'bg-gray-100 text-gray-800' };
+                        case 'no_show':
+                          return { label: '❌ No Show', classes: 'bg-red-100 text-red-800' };
+                        case 'rejected':
+                          return { label: '🚫 Rejected', classes: 'bg-orange-100 text-orange-800' };
+                        case 'cancelled':
+                          return { label: '📵 Cancelled', classes: 'bg-gray-100 text-gray-800' };
+                        default:
+                          return { label: 'Pending', classes: 'bg-yellow-100 text-yellow-800' };
+                      }
+                    })();
+
                     return (
                       <tr key={record.id} className={`border-b ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                         <td className="px-6 py-4 text-sm font-semibold text-gray-800">
@@ -200,18 +226,8 @@ function AttendancePageContent() {
                           {slotLabel}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            record.confirmation_status === 'confirmed_attended'
-                              ? 'bg-green-100 text-green-800'
-                              : record.present === false
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {record.confirmation_status === 'confirmed_attended'
-                              ? '✓ Present'
-                              : record.present === false
-                              ? '✗ Absent'
-                              : 'Pending'}
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusDisplay.classes}`}>
+                            {statusDisplay.label}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">

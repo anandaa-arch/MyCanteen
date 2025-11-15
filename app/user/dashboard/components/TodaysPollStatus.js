@@ -29,6 +29,25 @@ const mealSlots = [
   { key: 'dinner', label: 'Dinner', icon: '🌙', booking: 'Book: 2-10 PM', serving: 'Serving: 7:30-10 PM' }
 ];
 
+const describeAttendanceChoice = (response) => {
+  if (!response) {
+    return { label: 'No response yet', showPortion: false };
+  }
+
+  if (response.confirmation_status === 'cancelled' || response.present === false) {
+    return { label: 'Not attending', showPortion: false };
+  }
+
+  if (response.confirmation_status === 'no_show') {
+    return { label: 'Marked as No Show', showPortion: false };
+  }
+
+  return {
+    label: 'Attending',
+    showPortion: true
+  };
+};
+
 export default function TodaysPollStatus({ userStats, onUpdateResponse }) {
   const responsesBySlot = (userStats.todaysPollResponses || []).reduce((acc, resp) => {
     acc[resp.meal_slot] = resp;
@@ -46,6 +65,7 @@ export default function TodaysPollStatus({ userStats, onUpdateResponse }) {
         {mealSlots.map((slot) => {
           const response = responsesBySlot[slot.key];
           const status = response ? (response.confirmation_status || 'pending_customer_response') : null;
+          const attendanceCopy = describeAttendanceChoice(response);
 
           return (
             <div key={slot.key} className="border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
@@ -64,8 +84,8 @@ export default function TodaysPollStatus({ userStats, onUpdateResponse }) {
               <div className="text-sm text-gray-700 min-h-[48px]">
                 {response ? (
                   <>
-                    <p>{response.present ? 'Attending' : 'Not attending'}</p>
-                    {response.present && (
+                    <p>{attendanceCopy.label}</p>
+                    {attendanceCopy.showPortion && (
                       <p className="text-xs text-gray-600">Portion: {response.portion_size}</p>
                     )}
                   </>

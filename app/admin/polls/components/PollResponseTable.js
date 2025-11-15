@@ -18,6 +18,20 @@ import {
 import Pagination from '@/components/Pagination';
 import { SkeletonTable } from '@/components/Skeleton';
 
+const mealSlotMeta = {
+  breakfast: { label: 'Breakfast', booking: '5-9 AM' },
+  lunch: { label: 'Lunch', booking: '9 AM-2 PM' },
+  dinner: { label: 'Dinner', booking: '2-10 PM' }
+};
+
+const formatSlot = (slot) => mealSlotMeta[slot]?.label || '—';
+
+const formatDecisionTime = (record) => {
+  const source = record.confirmed_at || record.updated_at || record.attended_at;
+  if (!source) return null;
+  return new Date(source).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
 export default function PollResponseTable({ data, onPollUpdate, loading, selectedDate }) {
   const [updatingPoll, setUpdatingPoll] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
@@ -213,6 +227,8 @@ export default function PollResponseTable({ data, onPollUpdate, loading, selecte
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meal Slot</th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Decision Time</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Response</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Portion</th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -222,9 +238,10 @@ export default function PollResponseTable({ data, onPollUpdate, loading, selecte
               {paginatedData.map((item, index) => {
                 const responseId = item.id;
                 const userId = item.user_id;
-                const isPresent = item.present || false;
+                const rawPresent = item.present === true;
                 const portionSize = item.portion_size || 'full';
                 const confirmationStatus = item.confirmation_status || 'pending_customer_response';
+                const displayPresent = rawPresent && !['cancelled', 'no_show', 'rejected'].includes(confirmationStatus);
                 const userData = item.profiles_new;
 
                 // Skip rendering if no valid ID
@@ -236,7 +253,8 @@ export default function PollResponseTable({ data, onPollUpdate, loading, selecte
                   'awaiting_admin_confirmation': 'bg-yellow-50',
                   'confirmed_attended': 'bg-green-50',
                   'no_show': 'bg-red-50',
-                  'rejected': 'bg-orange-50'
+                  'rejected': 'bg-orange-50',
+                  'cancelled': 'bg-gray-50'
                 };
 
                 return (
@@ -271,19 +289,37 @@ export default function PollResponseTable({ data, onPollUpdate, loading, selecte
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{formatSlot(item.meal_slot)}</div>
+                      {item.meal_slot && (
+                        <div className="text-xs text-gray-500">{mealSlotMeta[item.meal_slot]?.booking}</div>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {formatDecisionTime(item) ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-700">
+                          <Clock size={16} className="text-gray-400" />
+                          {formatDecisionTime(item)}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <button
-                        onClick={() => handleAttendanceToggle(responseId, isPresent)}
+                        onClick={() => handleAttendanceToggle(responseId, rawPresent)}
                         disabled={updatingPoll[`${responseId}_attendance`]}
                         className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                          isPresent 
+                          displayPresent 
                             ? 'bg-green-100 text-green-800 hover:bg-green-200' 
                             : 'bg-red-100 text-red-800 hover:bg-red-200'
                         } ${updatingPoll[`${responseId}_attendance`] ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        {isPresent ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                        {displayPresent ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
                         {updatingPoll[`${responseId}_attendance`] 
                           ? 'Updating...' 
-                          : isPresent ? 'Present' : 'Absent'
+                          : displayPresent ? 'Present' : 'Absent'
                         }
                       </button>
                     </td>

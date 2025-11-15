@@ -1,4 +1,5 @@
 import { getSupabaseRouteClient } from '@/lib/supabaseRouteHandler';
+import { ensurePollForSlot, pollResponsesSupportsPollId } from '@/lib/pollHelpers';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
@@ -30,7 +31,7 @@ export async function POST(request) {
 
     // Parse request body
     const body = await request.json();
-    const { scannedData } = body;
+    const { scannedData, mealSlot } = body;
 
     if (!scannedData) {
       return NextResponse.json(
@@ -51,7 +52,7 @@ export async function POST(request) {
       );
     }
 
-    const { userId, type, timestamp } = qrPayload;
+    const { userId, type } = qrPayload;
 
     if (!userId || type !== 'attendance') {
       return NextResponse.json(
@@ -74,50 +75,87 @@ export async function POST(request) {
       );
     }
 
-    // Get today's poll
-    const today = new Date().toISOString().split('T')[0];
-    const { data: todaysPoll, error: pollError } = await supabase
-      .from('polls')
-      .select('id')
-      .eq('poll_date', today)
-      .single();
-
-    if (pollError || !todaysPoll) {
+    const slot = (mealSlot || qrPayload.mealSlot || qrPayload.slot || '').toLowerCase();
+    const validSlots = ['breakfast', 'lunch', 'dinner'];
+    if (!slot) {
       return NextResponse.json(
-        { error: 'No active poll for today' },
+        { error: 'Meal slot is required. Please select breakfast, lunch, or dinner.' },
+        { status: 400 }
+      );
+    }
+    if (!validSlots.includes(slot)) {
+      return NextResponse.json(
+        { error: 'Invalid meal slot provided.' },
         { status: 400 }
       );
     }
 
+    // Ensure today's poll exists for the selected slot
+    const today = new Date().toISOString().split('T')[0];
+    const { poll: todaysPoll, error: pollError } = await ensurePollForSlot(supabase, today, slot);
+
+    if (pollError || !todaysPoll) {
+      console.error('Poll fetch/create error:', pollError);
+      return NextResponse.json(
+        { error: 'Failed to load attendance poll', details: pollError?.message },
+        { status: 500 }
+      );
+    }
+
+    const pollIdSupport = await pollResponsesSupportsPollId(supabase);
+    if (pollIdSupport.error) {
+      console.warn('poll_id probe error:', pollIdSupport.error);
+    }
+    const canUsePollId = Boolean(todaysPoll.id) && pollIdSupport.supported;
+
     // Create or update attendance record
     const scanTimestamp = new Date().toISOString();
-    
-    // Check if attendance already recorded
-    const { data: existingAttendance, error: existingError } = await supabase
+
+    let attendanceQuery = supabase
       .from('poll_responses')
-      .select('id, confirmation_status')
-      .eq('poll_id', todaysPoll.id)
-      .eq('user_id', userId)
-      .single();
+      .select('id, confirmation_status, actual_meal_time')
+      .eq('user_id', userId);
+
+    if (canUsePollId) {
+      attendanceQuery = attendanceQuery.eq('poll_id', todaysPoll.id);
+    } else {
+      attendanceQuery = attendanceQuery.eq('date', today).eq('meal_slot', slot);
+    }
+
+    const { data: existingAttendance, error: existingError } = await attendanceQuery.maybeSingle();
 
     let attendanceRecord;
     let isNewRecord = false;
 
-    if (existingError?.code === 'PGRST116') {
+    if (existingError && existingError.code !== 'PGRST116') {
+      console.error('Attendance query error:', existingError);
+      return NextResponse.json(
+        { error: 'Failed to check existing attendance' },
+        { status: 500 }
+      );
+    }
+
+    if (!existingAttendance) {
       // No existing record - create new one
+      const insertPayload = {
+        user_id: userId,
+        present: true,
+        confirmation_status: 'confirmed_attended',
+        attended_at: scanTimestamp,
+        actual_meal_time: scanTimestamp,
+        meal_slot: slot,
+        date: today,
+        created_at: scanTimestamp,
+        updated_at: scanTimestamp
+      };
+
+      if (canUsePollId) {
+        insertPayload.poll_id = todaysPoll.id;
+      }
+
       const { data: newRecord, error: createError } = await supabase
         .from('poll_responses')
-        .insert([
-          {
-            poll_id: todaysPoll.id,
-            user_id: userId,
-            present: true,
-            confirmation_status: 'confirmed_attended',
-            attended_at: scanTimestamp,
-            created_at: scanTimestamp,
-            updated_at: scanTimestamp
-          }
-        ])
+        .insert([insertPayload])
         .select()
         .single();
 
@@ -131,7 +169,7 @@ export async function POST(request) {
 
       attendanceRecord = newRecord;
       isNewRecord = true;
-    } else if (!existingError && existingAttendance) {
+    } else {
       // Update existing record
       const { data: updatedRecord, error: updateError } = await supabase
         .from('poll_responses')
@@ -139,6 +177,8 @@ export async function POST(request) {
           present: true,
           confirmation_status: 'confirmed_attended',
           attended_at: scanTimestamp,
+          actual_meal_time: existingAttendance.actual_meal_time || scanTimestamp,
+          meal_slot: slot,
           updated_at: scanTimestamp
         })
         .eq('id', existingAttendance.id)
@@ -155,12 +195,6 @@ export async function POST(request) {
 
       attendanceRecord = updatedRecord;
       isNewRecord = false;
-    } else {
-      console.error('Attendance query error:', existingError);
-      return NextResponse.json(
-        { error: 'Failed to check existing attendance' },
-        { status: 500 }
-      );
     }
 
     return NextResponse.json({
@@ -175,6 +209,7 @@ export async function POST(request) {
         userEmail: scannedUser.email,
         status: attendanceRecord.confirmation_status,
         attendedAt: attendanceRecord.attended_at,
+        mealSlot: attendanceRecord.meal_slot || slot,
         isNewRecord
       }
     });
@@ -250,7 +285,7 @@ export async function GET(request) {
 
       // Calculate stats
       const present = responses?.filter(r => r.confirmation_status === 'confirmed_attended').length || 0;
-      const absent = responses?.filter(r => r.present === false).length || 0;
+      const absent = responses?.filter(r => r.present === false || r.confirmation_status === 'cancelled').length || 0;
       
       // Only count records where user made a clear choice (present OR absent)
       // Don't count pending/awaiting confirmation as they haven't finalized attendance
@@ -285,39 +320,59 @@ export async function GET(request) {
     }
 
     const pollId = searchParams.get('pollId');
+    const mealSlot = searchParams.get('mealSlot');
+    const targetDate = searchParams.get('date');
     const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-    if (!pollId) {
+    if (!pollId && !(mealSlot && targetDate)) {
       return NextResponse.json(
-        { error: 'pollId is required' },
+        { error: 'Provide pollId or mealSlot+date' },
         { status: 400 }
       );
     }
 
-    // Get attendance records for the poll
-    const { data: attendanceRecords, error: fetchError } = await supabase
+    const pollIdResult = await pollResponsesSupportsPollId(supabase);
+    if (pollIdResult.error) {
+      console.warn('poll_id probe error:', pollIdResult.error);
+    }
+
+    const selectionFields = [
+      'id',
+      'user_id',
+      'present',
+      'confirmation_status',
+      'attended_at',
+      'actual_meal_time',
+      'created_at',
+      'updated_at',
+      'meal_slot',
+      'date'
+    ];
+
+    if (pollIdResult.supported) {
+      selectionFields.splice(2, 0, 'poll_id');
+    }
+
+    const attendanceQuery = supabase
       .from('poll_responses')
-      .select(`
-        id,
-        user_id,
-        poll_id,
-        present,
-        confirmation_status,
-        attended_at,
-        created_at,
-        updated_at,
-        profiles_new:user_id (
-          id,
-          full_name,
-          email,
-          dept,
-          year
-        )
-      `)
-      .eq('poll_id', pollId)
+      .select(selectionFields.join(', '))
       .eq('confirmation_status', 'confirmed_attended')
       .order('attended_at', { ascending: false })
       .limit(limit);
+
+    if (pollId) {
+      if (!pollIdResult.supported) {
+        return NextResponse.json(
+          { error: 'pollId filtering unavailable in current database schema' },
+          { status: 400 }
+        );
+      }
+      attendanceQuery.eq('poll_id', pollId);
+    } else {
+      attendanceQuery.eq('meal_slot', mealSlot).eq('date', targetDate);
+    }
+
+    const { data: attendanceRecords, error: fetchError } = await attendanceQuery;
 
     if (fetchError) {
       console.error('Fetch attendance error:', fetchError);
@@ -327,10 +382,33 @@ export async function GET(request) {
       );
     }
 
+    let enrichedRecords = attendanceRecords || [];
+
+    if (enrichedRecords.length) {
+      const userIds = [...new Set(enrichedRecords.map((record) => record.user_id).filter(Boolean))];
+
+      if (userIds.length) {
+        const { data: profileRows, error: profileFetchError } = await supabase
+          .from('profiles_new')
+          .select('id, full_name, email, dept, year')
+          .in('id', userIds);
+
+        if (profileFetchError) {
+          console.warn('Profile lookup error:', profileFetchError);
+        } else {
+          const profileMap = Object.fromEntries(profileRows.map((profile) => [profile.id, profile]));
+          enrichedRecords = enrichedRecords.map((record) => ({
+            ...record,
+            profiles_new: profileMap[record.user_id] || null,
+          }));
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: attendanceRecords,
-      count: attendanceRecords.length
+      data: enrichedRecords,
+      count: enrichedRecords.length
     });
 
   } catch (error) {

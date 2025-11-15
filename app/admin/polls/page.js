@@ -172,16 +172,18 @@ function AdminPollsPageContent() {
     router.push('/login');
   };
 
+  const didUserOptIn = (response) => response.present && response.confirmation_status !== 'cancelled';
+
   // Calculate statistics
   const pollStats = {
     totalUsers: allUsers.length,
     totalResponses: pollResponses.length,
     pendingConfirmations: pollResponses.filter(r => r.confirmation_status === 'pending').length,
     confirmedResponses: pollResponses.filter(r => r.confirmation_status === 'confirmed_attended').length,
-    attendingUsers: pollResponses.filter(r => r.present).length,
+    attendingUsers: pollResponses.filter(didUserOptIn).length,
     noResponseUsers: allUsers.length - pollResponses.length,
-    fullMeals: pollResponses.filter(r => r.present && r.portion_size === 'full').length,
-    halfMeals: pollResponses.filter(r => r.present && r.portion_size === 'half').length,
+    fullMeals: pollResponses.filter(r => didUserOptIn(r) && r.portion_size === 'full').length,
+    halfMeals: pollResponses.filter(r => didUserOptIn(r) && r.portion_size === 'half').length,
   };
 
   // Filter responses based on selected filter

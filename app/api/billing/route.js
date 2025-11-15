@@ -395,7 +395,7 @@ async function getAllBills(supabase, month, year) {
         // Get all confirmed meals for this user in this month
         const { data: confirmedMeals } = await supabase
           .from('poll_responses')
-          .select('id, portion_size')
+          .select('id, portion_size, meal_slot')
           .eq('user_id', bill.user_id)
           .eq('present', true)
           .eq('confirmation_status', 'confirmed_attended')
@@ -411,9 +411,12 @@ async function getAllBills(supabase, month, year) {
               acc.fullCount += 1;
               acc.fullCost += MEAL_PRICES.full;
             }
+            if (meal.meal_slot) {
+              acc.slotCounts[meal.meal_slot] = (acc.slotCounts[meal.meal_slot] || 0) + 1;
+            }
             return acc;
           },
-          { halfCount: 0, fullCount: 0, halfCost: 0, fullCost: 0 }
+          { halfCount: 0, fullCount: 0, halfCost: 0, fullCost: 0, slotCounts: {} }
         );
 
         const computedTotal = computedBreakdown.halfCost + computedBreakdown.fullCost;
@@ -452,7 +455,8 @@ async function getAllBills(supabase, month, year) {
           total_amount: totalAmount,
           paid_amount: paidAmount,
           due_amount: dueAmount,
-          status: hasConfirmedMeals ? status : (bill.status || status)
+          status: hasConfirmedMeals ? status : (bill.status || status),
+          slot_breakdown: hasConfirmedMeals ? computedBreakdown.slotCounts : bill.slot_breakdown || null
         };
       })
     );

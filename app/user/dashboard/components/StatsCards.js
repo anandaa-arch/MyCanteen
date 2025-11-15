@@ -31,6 +31,17 @@ const mealSlots = [
   { key: 'dinner', label: 'Dinner' }
 ]
 
+const describeResponse = (response) => {
+  if (!response) return 'No response yet'
+  if (response.confirmation_status === 'cancelled' || response.present === false) {
+    return 'Not attending'
+  }
+  if (response.confirmation_status === 'no_show') {
+    return 'Marked as No Show'
+  }
+  return `Attending • ${response.portion_size} portion`
+}
+
 export default function StatsCards({ userStats }) {
   // Get current month and year for display
   const now = new Date()
@@ -76,11 +87,7 @@ export default function StatsCards({ userStats }) {
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{label}</p>
                     <p className="text-sm text-gray-600">
-                      {response ? (
-                        response.present
-                          ? `Attending • ${response.portion_size} portion`
-                          : 'Not attending'
-                      ) : 'No response yet'}
+                      {describeResponse(response)}
                     </p>
                   </div>
                   {response && getConfirmationBadge(response.confirmation_status)}

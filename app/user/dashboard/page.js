@@ -40,6 +40,11 @@ const getCurrentMealSlot = () => {
   }
 };
 
+const isResponseMarkedAttending = (response) => {
+  if (!response) return false;
+  return response.present === true && response.confirmation_status !== 'cancelled';
+};
+
 function UserDashboardContent() {
   const router = useRouter()
   const supabase = useSupabaseClient()
@@ -63,7 +68,7 @@ function UserDashboardContent() {
   const syncFormWithSlot = (slot, responses = []) => {
     const match = getResponseForSlot(slot, responses);
     if (match) {
-      setAttendance(match.present ? 'yes' : 'no');
+      setAttendance(isResponseMarkedAttending(match) ? 'yes' : 'no');
       setMealType(match.portion_size);
     } else {
       setAttendance('yes');
@@ -299,14 +304,16 @@ const checkAuthAndLoadData = async () => {
     setPollLoading(true)
     try {
       const today = new Date().toISOString().slice(0, 10)
+      const isAttending = attendance === 'yes'
+      const confirmationStatus = isAttending ? 'pending_customer_response' : 'cancelled'
 
       const payload = {
         user_id: currentUser.id,
         date: today,
-        present: attendance === 'yes',
+        present: isAttending,
         portion_size: mealType,
         meal_slot: mealSlot, // NEW: include meal slot
-        confirmation_status: 'pending_customer_response'
+        confirmation_status: confirmationStatus
       }
 
       // Use database function to handle upsert

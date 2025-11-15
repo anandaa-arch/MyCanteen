@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, X, Smartphone } from 'lucide-react';
 import QrScanner from 'qr-scanner';
 
-export default function QRScanner({ onScan, onClose, enabled = true }) {
+export default function QRScanner({ onScan, onClose, enabled = true, badgeLabel }) {
   const videoRef = useRef(null);
   const scanningRef = useRef(false);
   const [error, setError] = useState('');
@@ -315,6 +315,11 @@ export default function QRScanner({ onScan, onClose, enabled = true }) {
           <div className="flex items-center gap-2 sm:gap-3">
             <Camera size={20} className="text-blue-600 sm:w-6 sm:h-6" />
             <h2 className="text-lg sm:text-xl font-bold text-gray-800">Scan QR Code</h2>
+            {badgeLabel && (
+              <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
+                {badgeLabel}
+              </span>
+            )}
           </div>
           <button
             onClick={onClose}

@@ -11,6 +11,7 @@
     "seed:help": "node scripts/seed-dev-data.js --help"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.4",
     "@hookform/resolvers": "^5.2.2",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.52.1",
@@ -30,10 +31,13 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "^18.0.0",
     "@types/react": "19.1.11",
+    "babel-jest": "^30.2.0",
     "eslint": "^9",
     "eslint-config-next": "15.4.4",
+    "jest-environment-jsdom": "^30.2.0",
     "tailwindcss": "^4"
   }
 }
