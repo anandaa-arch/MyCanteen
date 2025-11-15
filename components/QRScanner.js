@@ -4,6 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Camera, X, Smartphone } from 'lucide-react';
 import QrScanner from 'qr-scanner';
 
+const QR_SCANNER_WORKER_STATIC_PATH = '/qr-scanner-worker.min.js';
+
+// Ensure the web worker can be loaded in Next.js bundles when running client-side
+if (typeof window !== 'undefined' && !QrScanner.WORKER_PATH) {
+  QrScanner.WORKER_PATH = QR_SCANNER_WORKER_STATIC_PATH;
+}
+
 export default function QRScanner({ onScan, onClose, enabled = true, badgeLabel }) {
   const videoRef = useRef(null);
   const scanningRef = useRef(false);
